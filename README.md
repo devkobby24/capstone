@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Capstone Project
+
+This is a full-stack web application built with Next.js for the frontend and Python for the backend. The project features data visualization capabilities using Chart.js and a modern UI built with Tailwind CSS.
+
+## Project Structure
+
+- `app/` - Next.js frontend application
+- `backend/` - Python backend server
+- `public/` - Static assets
+- `.venv/` - Python virtual environment
+
+## Frontend Features
+
+- Built with Next.js 15.3.2
+- React 19
+- Chart.js for data visualization
+- Tailwind CSS for styling
+- TypeScript support
+
+## Backend Features
+
+- Python-based backend server
+- RESTful API endpoints
+- Virtual environment for dependency management
 
 ## Getting Started
 
-First, run the development server:
+### Frontend Setup
 
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run the development server:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The frontend will be available at [http://localhost:3000](http://localhost:3000)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Backend Setup
 
-## Learn More
+1. Activate the virtual environment:
+```bash
+# Windows
+.venv\Scripts\activate
+# Unix/MacOS
+source .venv/bin/activate
+```
 
-To learn more about Next.js, take a look at the following resources:
+2. Install Python dependencies:
+```bash
+cd backend
+pip install -r requirements.txt
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. Run the backend server:
+```bash
+python run.py
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Development
 
-## Deploy on Vercel
+- Frontend development server runs on port 3000
+- Backend server runs on port 8000
+- The frontend is configured to proxy API requests to the backend
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Building for Production
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Build the frontend:
+```bash
+npm run build
+```
+
+2. Start the production server:
+```bash
+npm start
+```
+
+## Technologies Used
+
+- **Frontend:**
+  - Next.js
+  - React
+  - Chart.js
+  - Tailwind CSS
+  - TypeScript
+
+- **Backend:**
+  - Python
+  - FastAPI (based on the project structure)
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
