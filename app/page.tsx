@@ -2,6 +2,29 @@
 
 import Image from "next/image";
 import { useState, useCallback } from "react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar, Line } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -61,6 +84,46 @@ export default function Home() {
     }
   };
 
+  // Prepare chart data
+  const distributionData = {
+    labels: ['Normal Traffic', 'Anomalous Traffic'],
+    datasets: [
+      {
+        label: 'Traffic Distribution',
+        data: results ? [results.normal_records, results.anomalies_detected] : [0, 0],
+        backgroundColor: ['rgba(34, 197, 94, 0.6)', 'rgba(239, 68, 68, 0.6)'],
+        borderColor: ['rgb(34, 197, 94)', 'rgb(239, 68, 68)'],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const anomalyScoresData = {
+    labels: results ? Array.from({ length: results.anomaly_scores.length }, (_, i) => i + 1) : [],
+    datasets: [
+      {
+        label: 'Anomaly Scores',
+        data: results ? results.anomaly_scores : [],
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+        tension: 0.1,
+      },
+    ],
+  };
+
+  const featureImportanceData = {
+    labels: results ? Object.keys(results.feature_importance) : [],
+    datasets: [
+      {
+        label: 'Feature Importance',
+        data: results ? Object.values(results.feature_importance) : [],
+        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+        borderColor: 'rgb(59, 130, 246)',
+        borderWidth: 1,
+      },
+    ],
+  };
+
   return (
     <div className="grid grid-rows-[80px_1fr_60px] items-center justify-items-center min-h-screen p-8 pb-20 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
       <header className="w-full flex justify-between items-center px-4 row-start-1">
@@ -90,8 +153,8 @@ export default function Home() {
         </nav>
       </header>
 
-      <main className="flex flex-col gap-[32px] row-start-2 items-center w-full max-w-5xl">
-        <div className="text-center mb-8">
+      <main className="flex flex-col gap-[32px] row-start-2 items-center w-full ">
+        <div className="text-center mb-8 max-w-5xl">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Network Anomaly Detection
           </h1>
@@ -100,7 +163,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="w-full max-w-3xl bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-8">
+        <div className="w-full max-w-7xl bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-8 flex flex-col items-center">
           <h2 className="text-2xl font-semibold mb-4">Upload Your Dataset</h2>
           <div
             onDrop={handleDrop}
@@ -166,9 +229,8 @@ export default function Home() {
           )}
 
           {results && (
-            <div className="mt-6 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <h3 className="text-xl font-semibold mb-4">Analysis Results</h3>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="w-full flex flex-col max-w-5xl space-y-8">
+              <div className="grid grid-cols-2 text-center gap-4">
                 <div className="p-4 bg-white dark:bg-gray-800 rounded-lg">
                   <p className="text-sm text-gray-500">Total Records</p>
                   <p className="text-2xl font-bold">{results.total_records}</p>
@@ -188,11 +250,71 @@ export default function Home() {
                   </p>
                 </div>
               </div>
+
+              <div className="flex flex-col gap-8">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-semibold mb-4">Traffic Distribution</h3>
+                  <Bar 
+                    data={distributionData}
+                    options={{
+                      responsive: true,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                        },
+                      },
+                    }}
+                  />
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-semibold mb-4">Anomaly Scores Over Time</h3>
+                  <Line 
+                    data={anomalyScoresData}
+                    options={{
+                      responsive: true,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                        },
+                      },
+                    }}
+                  />
+                </div>
+
+                {/* <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:col-span-2">
+                  <h3 className="text-xl font-semibold mb-4">Feature Importance</h3>
+                  <div className="h-96">
+                    <Bar 
+                      data={featureImportanceData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            position: 'top',
+                          },
+                        },
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </div> */}
+              </div>
             </div>
           )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 w-full">
+        <div className="grid md:grid-cols-2 gap-8 w-full max-w-7xl">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-semibold mb-3">How It Works</h3>
             <p className="text-gray-600 dark:text-gray-300">
