@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useCallback } from "react";
 import {
   Chart as ChartJS,
@@ -12,9 +11,10 @@ import {
   Title,
   Tooltip,
   Legend,
-} from 'chart.js';
-import { Bar, Line } from 'react-chartjs-2';
-
+} from "chart.js";
+import { Bar, Line } from "react-chartjs-2";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -86,26 +86,30 @@ export default function Home() {
 
   // Prepare chart data
   const distributionData = {
-    labels: ['Normal Traffic', 'Anomalous Traffic'],
+    labels: ["Normal Traffic", "Anomalous Traffic"],
     datasets: [
       {
-        label: 'Traffic Distribution',
-        data: results ? [results.normal_records, results.anomalies_detected] : [0, 0],
-        backgroundColor: ['rgba(34, 197, 94, 0.6)', 'rgba(239, 68, 68, 0.6)'],
-        borderColor: ['rgb(34, 197, 94)', 'rgb(239, 68, 68)'],
+        label: "Traffic Distribution",
+        data: results
+          ? [results.normal_records, results.anomalies_detected]
+          : [0, 0],
+        backgroundColor: ["rgba(34, 197, 94, 0.6)", "rgba(239, 68, 68, 0.6)"],
+        borderColor: ["rgb(34, 197, 94)", "rgb(239, 68, 68)"],
         borderWidth: 1,
       },
     ],
   };
 
   const anomalyScoresData = {
-    labels: results ? Array.from({ length: results.anomaly_scores.length }, (_, i) => i + 1) : [],
+    labels: results
+      ? Array.from({ length: results.anomaly_scores.length }, (_, i) => i + 1)
+      : [],
     datasets: [
       {
-        label: 'Anomaly Scores',
+        label: "Anomaly Scores",
         data: results ? results.anomaly_scores : [],
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+        borderColor: "rgb(59, 130, 246)",
+        backgroundColor: "rgba(59, 130, 246, 0.5)",
         tension: 0.1,
       },
     ],
@@ -115,10 +119,10 @@ export default function Home() {
     labels: results ? Object.keys(results.feature_importance) : [],
     datasets: [
       {
-        label: 'Feature Importance',
+        label: "Feature Importance",
         data: results ? Object.values(results.feature_importance) : [],
-        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: "rgba(59, 130, 246, 0.6)",
+        borderColor: "rgb(59, 130, 246)",
         borderWidth: 1,
       },
     ],
@@ -126,32 +130,7 @@ export default function Home() {
 
   return (
     <div className="grid grid-rows-[80px_1fr_60px] items-center justify-items-center min-h-screen p-8 pb-20 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
-      <header className="w-full flex justify-between items-center px-4 row-start-1">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/intruscan1.svg"
-            alt="NetDefender Logo"
-            width={100}
-            height={100}
-            priority
-            className="h-10 w-auto"
-          />
-        </div>
-        <nav className="hidden md:flex gap-6">
-          <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">
-            Home
-          </a>
-          <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">
-            About
-          </a>
-          <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">
-            Documentation
-          </a>
-          <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">
-            Contact
-          </a>
-        </nav>
-      </header>
+      <Header />
 
       <main className="flex flex-col gap-[32px] row-start-2 items-center w-full ">
         <div className="text-center mb-8 max-w-5xl">
@@ -159,7 +138,8 @@ export default function Home() {
             Network Anomaly Detection
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl">
-            Upload your network traffic datasets and leverage our advanced model to detect and predict anomalies with high accuracy.
+            Upload your network traffic datasets and leverage our advanced model
+            to detect and predict anomalies with high accuracy.
           </p>
         </div>
 
@@ -168,7 +148,7 @@ export default function Home() {
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors"
+            className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors w-full max-w-5xl"
           >
             <div className="flex flex-col items-center justify-center">
               <svg
@@ -237,30 +217,39 @@ export default function Home() {
                 </div>
                 <div className="p-4 bg-white dark:bg-gray-800 rounded-lg">
                   <p className="text-sm text-gray-500">Anomalies Detected</p>
-                  <p className="text-2xl font-bold text-red-600">{results.anomalies_detected}</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {results.anomalies_detected}
+                  </p>
                 </div>
                 <div className="p-4 bg-white dark:bg-gray-800 rounded-lg">
                   <p className="text-sm text-gray-500">Normal Records</p>
-                  <p className="text-2xl font-bold text-green-600">{results.normal_records}</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {results.normal_records}
+                  </p>
                 </div>
                 <div className="p-4 bg-white dark:bg-gray-800 rounded-lg">
                   <p className="text-sm text-gray-500">Anomaly Rate</p>
                   <p className="text-2xl font-bold">
-                    {results.anomaly_rate ? results.anomaly_rate.toFixed(2) : '0.00'}%
+                    {results.anomaly_rate
+                      ? results.anomaly_rate.toFixed(2)
+                      : "0.00"}
+                    %
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-col gap-8">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                  <h3 className="text-xl font-semibold mb-4">Traffic Distribution</h3>
-                  <Bar 
+                  <h3 className="text-xl font-semibold mb-4">
+                    Traffic Distribution
+                  </h3>
+                  <Bar
                     data={distributionData}
                     options={{
                       responsive: true,
                       plugins: {
                         legend: {
-                          position: 'top',
+                          position: "top",
                         },
                       },
                     }}
@@ -268,14 +257,16 @@ export default function Home() {
                 </div>
 
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                  <h3 className="text-xl font-semibold mb-4">Anomaly Scores Over Time</h3>
-                  <Line 
+                  <h3 className="text-xl font-semibold mb-4">
+                    Anomaly Scores Over Time
+                  </h3>
+                  <Line
                     data={anomalyScoresData}
                     options={{
                       responsive: true,
                       plugins: {
                         legend: {
-                          position: 'top',
+                          position: "top",
                         },
                       },
                       scales: {
@@ -318,10 +309,10 @@ export default function Home() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-semibold mb-3">How It Works</h3>
             <p className="text-gray-600 dark:text-gray-300">
-              Our advanced anomaly detection model analyzes network traffic patterns
-              to identify potential security threats in real-time. The model uses
-              machine learning to detect unusual patterns and behaviors in your
-              network data.
+              Our advanced anomaly detection model analyzes network traffic
+              patterns to identify potential security threats in real-time. The
+              model uses machine learning to detect unusual patterns and
+              behaviors in your network data.
             </p>
           </div>
 
@@ -337,72 +328,7 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center w-full text-sm text-gray-500 dark:text-gray-400">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4 hover:text-blue-600 dark:hover:text-blue-400"
-          href="#"
-          rel="noopener noreferrer"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-          </svg>
-          Documentation
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4 hover:text-blue-600 dark:hover:text-blue-400"
-          href="#"
-          rel="noopener noreferrer"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-          </svg>
-          API Reference
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4 hover:text-blue-600 dark:hover:text-blue-400"
-          href="#"
-          rel="noopener noreferrer"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
-          Help Center
-        </a>
-      </footer>
+      <Footer />
     </div>
   );
 }
