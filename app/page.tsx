@@ -40,6 +40,7 @@ export default function Home() {
     formData.append("file", file);
 
     try {
+      console.log("Sending file to backend:", file.name);
       const response = await fetch("http://localhost:8000/api/analyze", {
         method: "POST",
         body: formData,
@@ -50,8 +51,10 @@ export default function Home() {
       }
 
       const data = await response.json();
+      console.log("Received results from backend:", data);
       setResults(data);
     } catch (err) {
+      console.error("Error during file upload:", err);
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsUploading(false);
@@ -181,7 +184,7 @@ export default function Home() {
                 <div className="p-4 bg-white dark:bg-gray-800 rounded-lg">
                   <p className="text-sm text-gray-500">Anomaly Rate</p>
                   <p className="text-2xl font-bold">
-                    {((results.anomalies_detected / results.total_records) * 100).toFixed(2)}%
+                    {results.anomaly_rate ? results.anomaly_rate.toFixed(2) : '0.00'}%
                   </p>
                 </div>
               </div>
