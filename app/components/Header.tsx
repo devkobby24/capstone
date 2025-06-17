@@ -28,6 +28,7 @@ const Header = () => {
   return (
     <header className="w-full flex justify-between items-center px-4 row-start-1 relative">
       <div className="flex items-center gap-3">
+        <Link href="/" className="flex items-center">
         <Image
           src="/intruscan1.svg"
           alt="intruScan Logo"
@@ -36,6 +37,7 @@ const Header = () => {
           priority
           className="h-10 w-auto"
         />
+        </Link>
       </div>
 
       {/* Desktop Navigation */}
