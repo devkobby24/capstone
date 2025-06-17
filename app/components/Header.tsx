@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
 import Image from "next/image";
+import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 
 const Header = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
+  const { isSignedIn } = useAuth();
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -20,8 +21,8 @@ const Header = () => {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/about", label: "About" },
-    { href: "/documentation", label: "Documentation" },
-    { href: "/contact", label: "Contact" },
+    // { href: "/sign-in", label: "Sign In" },
+    // { href: "/sign-up", label: "Sign Up" },
   ];
 
   return (
@@ -38,7 +39,7 @@ const Header = () => {
       </div>
 
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex gap-6">
+      <nav className="hidden md:flex gap-6 items-center">
         {navLinks.map((link) => (
           <Link
             key={link.href}
@@ -52,6 +53,7 @@ const Header = () => {
             {link.label}
           </Link>
         ))}
+        {isSignedIn ? <UserButton /> : <SignInButton />}
       </nav>
 
       {/* Mobile Menu Button */}
