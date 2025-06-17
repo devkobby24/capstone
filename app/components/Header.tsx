@@ -26,7 +26,7 @@ const Header = () => {
   ];
 
   return (
-    <header className="w-full flex justify-between items-center px-4 row-start-1 relative">
+    <header className="w-full flex justify-between items-center px-4 row-start-1 relative bg-gradient-to-b from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 p-10">
       <div className="flex items-center gap-3">
         <Image
           src="/intruscan1.svg"
@@ -39,7 +39,7 @@ const Header = () => {
       </div>
 
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex gap-6 items-center">
+      <nav className="hidden md:flex gap-6 items-center justify-center">
         {navLinks.map((link) => (
           <Link
             key={link.href}
@@ -57,38 +57,41 @@ const Header = () => {
       </nav>
 
       {/* Mobile Menu Button */}
-      <button
-        className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        onClick={toggleMenu}
-        aria-label="Toggle menu"
-      >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      <div className="flex items-center gap-3 md:hidden">
+        <button
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          onClick={toggleMenu}
+          aria-label="Toggle menu"
         >
-          {isMenuOpen ? (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          ) : (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 12h16M4 18h16"
-            />
-          )}
-        </svg>
-      </button>
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {isMenuOpen ? (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            ) : (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            )}
+          </svg>
+        </button>
+        {isSignedIn && <UserButton />}
+      </div>
 
       {/* Mobile Navigation */}
       <div
-        className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 bg-opacity-50 z-40 transition-opacity duration-300 md:hidden ${
           isMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={closeMenu}
