@@ -10,6 +10,7 @@ const Header = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { isSignedIn } = useAuth();
+  
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -21,22 +22,20 @@ const Header = () => {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/about", label: "About" },
-    // { href: "/sign-in", label: "Sign In" },
-    // { href: "/sign-up", label: "Sign Up" },
   ];
 
   return (
     <header className="w-full flex justify-between items-center px-4 row-start-1 relative">
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center">
-        <Image
-          src="/intruscan1.svg"
-          alt="intruScan Logo"
-          width={100}
-          height={100}
-          priority
-          className="h-10 w-auto"
-        />
+          <Image
+            src="/intruscan1.svg"
+            alt="intruScan Logo"
+            width={100}
+            height={100}
+            priority
+            className="h-10 w-auto"
+          />
         </Link>
       </div>
 
@@ -55,7 +54,15 @@ const Header = () => {
             {link.label}
           </Link>
         ))}
-        {isSignedIn ? <UserButton /> : <SignInButton />}
+        {isSignedIn ? (
+          <UserButton />
+        ) : (
+          <SignInButton>
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+              Sign In
+            </button>
+          </SignInButton>
+        )}
       </nav>
 
       {/* Mobile Menu Button */}
@@ -93,7 +100,7 @@ const Header = () => {
 
       {/* Mobile Navigation */}
       <div
-        className={`fixed inset-0 bg-opacity-50 z-40 transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 md:hidden ${
           isMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={closeMenu}
@@ -125,7 +132,7 @@ const Header = () => {
               </svg>
             </button>
           </div>
-          <div className="flex flex-col p-4">
+          <div className="flex flex-col p-4 space-y-2">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -140,6 +147,24 @@ const Header = () => {
                 {link.label}
               </Link>
             ))}
+            
+            {/* Mobile Authentication */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              {isSignedIn ? (
+                <div className="flex items-center justify-center">
+                  <UserButton />
+                </div>
+              ) : (
+                <SignInButton>
+                  <button 
+                    onClick={closeMenu}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Sign In
+                  </button>
+                </SignInButton>
+              )}
+            </div>
           </div>
         </nav>
       </div>

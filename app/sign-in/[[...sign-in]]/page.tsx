@@ -19,7 +19,7 @@ export default function Page() {
               Welcome Back
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
-              Sign in to access your network anomaly detection dashboard
+              Sign in to access your anomaly detection dashboard
             </p>
           </div>
           
