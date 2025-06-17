@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
 import Image from "next/image";
-import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
+import { SignInButton, UserButton, useAuth, useUser } from "@clerk/nextjs";
 
 const Header = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { isSignedIn } = useAuth();
-  
+  const { user } = useUser();
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -22,6 +23,8 @@ const Header = () => {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/about", label: "About" },
+    { href: "/detect", label: "Detect" },
+    { href: "/dashboard", label: "Dashboard" },
   ];
 
   return (
@@ -34,7 +37,7 @@ const Header = () => {
             width={100}
             height={100}
             priority
-            className="h-10 w-auto"
+            className="h-10 w-40 md:w-auto"
           />
         </Link>
       </div>
@@ -95,7 +98,12 @@ const Header = () => {
             )}
           </svg>
         </button>
-        {isSignedIn && <UserButton />}
+        {isSignedIn && (
+          <div className="flex items-center">
+            
+            <UserButton />
+          </div>
+        )}
       </div>
 
       {/* Mobile Navigation */}
@@ -147,16 +155,26 @@ const Header = () => {
                 {link.label}
               </Link>
             ))}
-            
+
             {/* Mobile Authentication */}
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               {isSignedIn ? (
-                <div className="flex items-center justify-center">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <UserButton />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {user?.firstName && user?.lastName
+                        ? `${user.firstName} ${user.lastName}`
+                        : user?.firstName || user?.username || "User"}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {user?.primaryEmailAddress?.emailAddress}
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <SignInButton>
-                  <button 
+                  <button
                     onClick={closeMenu}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
                   >
