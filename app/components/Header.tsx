@@ -26,7 +26,7 @@ const Header = () => {
   ];
 
   return (
-    <header className="w-full flex justify-between items-center px-4 row-start-1 relative bg-gradient-to-b from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 p-10">
+    <header className="w-full flex justify-between items-center px-4 row-start-1 relative">
       <div className="flex items-center gap-3">
         <Image
           src="/intruscan1.svg"
