@@ -18,6 +18,7 @@ import { Bar, Line } from "react-chartjs-2";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { db } from "@/firebaseconfig";
+import { toast } from "sonner";
 
 ChartJS.register(
   CategoryScale,
@@ -139,13 +140,13 @@ export default function DetectPage() {
           status: "completed",
         });
 
-        // console.log("Scan results saved to Firestore successfully");
+        toast("Scan results saved successfully");
       } catch (firestoreError) {
-        // console.error("Error saving to Firestore:", firestoreError);
+        toast("Failed to save scan results");
         // console.warn("Results displayed but not saved to history");
       }
     } catch (err) {
-      // console.error("Error during file upload:", err);
+      toast("An error occurred during analysis");
       setError(
         err instanceof Error ? err.message : "An error occurred during analysis"
       );
