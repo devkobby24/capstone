@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useUser } from "@clerk/nextjs";
+import { saveUserScan } from "@/lib/firestore";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -32,6 +34,7 @@ export default function DetectPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [results, setResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const { user, isLoaded } = useUser();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -55,7 +58,21 @@ export default function DetectPage() {
   }, []);
 
   const handleUpload = async () => {
-    if (!file) return;
+    // Check if user is loaded and authenticated
+    if (!isLoaded) {
+      setError("Please wait, loading user information...");
+      return;
+    }
+
+    if (!user) {
+      setError("You must be signed in to analyze files");
+      return;
+    }
+
+    if (!file) {
+      setError("Please select a file first");
+      return;
+    }
 
     setIsUploading(true);
     setError(null);
@@ -65,25 +82,106 @@ export default function DetectPage() {
 
     try {
       console.log("Sending file to backend:", file.name);
+
+      // Call your backend API
       const response = await fetch("http://localhost:8000/api/analyze", {
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to analyze file");
+        throw new Error(
+          `Backend error: ${response.status} ${response.statusText}`
+        );
       }
 
       const data = await response.json();
       console.log("Received results from backend:", data);
+
+      // Validate backend response structure
+      if (!data || typeof data.anomaly_rate === "undefined") {
+        throw new Error("Invalid response from backend");
+      }
+
       setResults(data);
+
+      // Save to Firestore
+      try {
+        const riskLevel = calculateRiskLevel(data.anomaly_rate);
+        await saveUserScan({
+          userId: user.id, // Clerk user ID
+          filename: file.name,
+          uploadDate: new Date(),
+          results: {
+            total_records: data.total_records || 0,
+            anomalies_detected: data.anomalies_detected || 0,
+            normal_records: data.normal_records || 0,
+            anomaly_rate: data.anomaly_rate || 0,
+            anomaly_scores: data.anomaly_scores || [],
+            processing_time: data.processing_time || 0,
+          },
+          riskLevel,
+          status: "completed",
+        });
+
+        console.log("Scan results saved to Firestore successfully");
+      } catch (firestoreError) {
+        console.error("Error saving to Firestore:", firestoreError);
+        // Don't fail the entire operation if Firestore save fails
+        // Just log the error and continue showing results
+        console.warn("Results displayed but not saved to history");
+      }
     } catch (err) {
       console.error("Error during file upload:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(
+        err instanceof Error ? err.message : "An error occurred during analysis"
+      );
     } finally {
       setIsUploading(false);
     }
   };
+
+  const calculateRiskLevel = (
+    anomalyRate: number
+  ): "Low" | "Medium" | "High" => {
+    if (anomalyRate > 20) return "High";
+    if (anomalyRate > 10) return "Medium";
+    return "Low";
+  };
+
+  // Show loading state if user data isn't loaded yet
+  if (!isLoaded) {
+    return (
+      <div className="grid grid-rows-[80px_1fr_60px] items-center justify-items-center min-h-screen p-8 pb-20 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
+        <Header />
+        <main className="flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
+  if (!user) {
+    return (
+      <div className="grid grid-rows-[80px_1fr_60px] items-center justify-items-center min-h-screen p-8 pb-20 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
+        <Header />
+        <main className="flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Please sign in to access the anomaly detection feature.
+            </p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   // Prepare chart data
   const distributionData = {
@@ -103,12 +201,15 @@ export default function DetectPage() {
 
   const anomalyScoresData = {
     labels: results
-      ? Array.from({ length: results.anomaly_scores.length }, (_, i) => i + 1)
+      ? Array.from(
+          { length: results.anomaly_scores?.length || 0 },
+          (_, i) => i + 1
+        )
       : [],
     datasets: [
       {
         label: "Anomaly Scores",
-        data: results ? results.anomaly_scores : [],
+        data: results ? results.anomaly_scores || [] : [],
         borderColor: "rgb(59, 130, 246)",
         backgroundColor: "rgba(59, 130, 246, 0.5)",
         tension: 0.1,
@@ -126,7 +227,8 @@ export default function DetectPage() {
             Anomaly Detection
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl">
-            Upload your network traffic dataset to start the analysis and detect potential anomalies.
+            Upload your network traffic dataset to start the analysis and detect
+            potential anomalies.
           </p>
         </div>
 
@@ -182,7 +284,7 @@ export default function DetectPage() {
               <button
                 onClick={handleUpload}
                 disabled={isUploading}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full transition-colors disabled:opacity-50"
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isUploading ? "Analyzing..." : "Analyze Dataset"}
               </button>
@@ -190,28 +292,31 @@ export default function DetectPage() {
           )}
 
           {error && (
-            <div className="mt-4 p-4 bg-red-100 text-red-700 rounded-lg">
-              {error}
+            <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg max-w-2xl">
+              <p className="font-medium">Error:</p>
+              <p>{error}</p>
             </div>
           )}
 
           {results && (
-            <div className="w-full flex flex-col max-w-5xl space-y-8">
+            <div className="w-full flex flex-col max-w-5xl space-y-8 mt-8">
               <div className="grid grid-cols-2 md:grid-cols-4 text-center gap-4">
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <p className="text-sm text-gray-500">Total Records</p>
-                  <p className="text-2xl font-bold">{results.total_records}</p>
+                  <p className="text-2xl font-bold">
+                    {results.total_records || 0}
+                  </p>
                 </div>
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <p className="text-sm text-gray-500">Anomalies Detected</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {results.anomalies_detected}
+                    {results.anomalies_detected || 0}
                   </p>
                 </div>
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <p className="text-sm text-gray-500">Normal Records</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {results.normal_records}
+                    {results.normal_records || 0}
                   </p>
                 </div>
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -243,27 +348,30 @@ export default function DetectPage() {
                   />
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg p-6">
-                  <h3 className="text-xl font-semibold mb-4">
-                    Anomaly Scores Over Time
-                  </h3>
-                  <Line
-                    data={anomalyScoresData}
-                    options={{
-                      responsive: true,
-                      plugins: {
-                        legend: {
-                          position: "top",
-                        },
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                        },
-                      },
-                    }}
-                  />
-                </div>
+                {results.anomaly_scores &&
+                  results.anomaly_scores.length > 0 && (
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg p-6">
+                      <h3 className="text-xl font-semibold mb-4">
+                        Anomaly Scores Over Time
+                      </h3>
+                      <Line
+                        data={anomalyScoresData}
+                        options={{
+                          responsive: true,
+                          plugins: {
+                            legend: {
+                              position: "top",
+                            },
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                            },
+                          },
+                        }}
+                      />
+                    </div>
+                  )}
               </div>
             </div>
           )}
