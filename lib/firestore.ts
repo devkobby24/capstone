@@ -12,7 +12,13 @@ export interface ScanResult {
         anomalies_detected: number;
         normal_records: number;
         anomaly_rate: number;
-        anomaly_scores: number[];
+        anomaly_scores?: number[];
+        anomaly_scores_summary?: {
+            count: number;
+            min: number;
+            max: number;
+            avg: number;
+        };
         processing_time: number;
     };
     riskLevel: 'Low' | 'Medium' | 'High';
@@ -20,16 +26,56 @@ export interface ScanResult {
 }
 
 export const saveUserScan = async (scanData: Omit<ScanResult, 'id'>) => {
-    try {
-        const docRef = await addDoc(collection(db, 'user_scans'), {
-            ...scanData,
-            uploadDate: new Date(),
-        });
-        return docRef.id;
-    } catch (error) {
-        console.error('Error saving scan:', error);
-        throw error;
-    }
+  try {
+    // Helper function to safely calculate min/max for large arrays
+    const calculateStats = (scores: number[]) => {
+      if (!scores || scores.length === 0) {
+        return { count: 0, min: 0, max: 0, avg: 0 };
+      }
+
+      let min = scores[0];
+      let max = scores[0];
+      let sum = 0;
+
+      for (let i = 0; i < scores.length; i++) {
+        const score = scores[i];
+        if (score < min) min = score;
+        if (score > max) max = score;
+        sum += score;
+      }
+
+      return {
+        count: scores.length,
+        min: min,
+        max: max,
+        avg: sum / scores.length,
+      };
+    };
+
+    // Create a smaller version of the data for storage
+    const compactData = {
+      ...scanData,
+      results: {
+        total_records: scanData.results.total_records,
+        anomalies_detected: scanData.results.anomalies_detected,
+        normal_records: scanData.results.normal_records,
+        anomaly_rate: scanData.results.anomaly_rate,
+        // Use safe calculation for large arrays
+        anomaly_scores_summary: calculateStats(scanData.results.anomaly_scores || []),
+        processing_time: scanData.results.processing_time,
+      },
+      uploadDate: new Date(),
+    };
+
+    console.log("Attempting to save compact scan data:", compactData);
+    
+    const docRef = await addDoc(collection(db, 'user_scans'), compactData);
+    console.log("Document written with ID: ", docRef.id);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error saving scan:', error);
+    throw error;
+  }
 };
 
 export const getUserScans = async (userId: string, limitCount: number = 10) => {
@@ -45,6 +91,7 @@ export const getUserScans = async (userId: string, limitCount: number = 10) => {
         return querySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
+            uploadDate: doc.data().uploadDate.toDate ? doc.data().uploadDate.toDate() : doc.data().uploadDate,
         })) as ScanResult[];
     } catch (error) {
         console.error('Error fetching user scans:', error);
@@ -68,7 +115,9 @@ export const getUserStats = async (userId: string) => {
 
         // Calculate risk level based on recent scans
         const recentScans = scans.slice(0, 5);
-        const avgAnomalyRate = recentScans.reduce((sum, scan) => sum + (scan.results?.anomaly_rate || 0), 0) / recentScans.length;
+        const avgAnomalyRate = recentScans.length > 0 
+            ? recentScans.reduce((sum, scan) => sum + (scan.results?.anomaly_rate || 0), 0) / recentScans.length 
+            : 0;
 
         let riskLevel: 'Low' | 'Medium' | 'High' = 'Low';
         if (avgAnomalyRate > 20) riskLevel = 'High';

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { saveUserScan } from "@/lib/firestore";
 import {
@@ -17,6 +17,7 @@ import {
 import { Bar, Line } from "react-chartjs-2";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { db } from "@/firebaseconfig";
 
 ChartJS.register(
   CategoryScale,
@@ -35,6 +36,20 @@ export default function DetectPage() {
   const [results, setResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const { user, isLoaded } = useUser();
+
+  // // Move useEffect here - BEFORE any conditional returns
+  // useEffect(() => {
+  //   console.log("Firebase app:", db);
+  //   console.log("Environment variables:");
+  //   console.log(
+  //     "API Key:",
+  //     process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? "Set" : "Missing"
+  //   );
+  //   console.log(
+  //     "Project ID:",
+  //     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? "Set" : "Missing"
+  //   );
+  // }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -81,7 +96,7 @@ export default function DetectPage() {
     formData.append("file", file);
 
     try {
-      console.log("Sending file to backend:", file.name);
+      // console.log("Sending file to backend:", file.name);
 
       // Call your backend API
       const response = await fetch("http://localhost:8000/api/analyze", {
@@ -96,7 +111,7 @@ export default function DetectPage() {
       }
 
       const data = await response.json();
-      console.log("Received results from backend:", data);
+      // console.log("Received results from backend:", data);
 
       // Validate backend response structure
       if (!data || typeof data.anomaly_rate === "undefined") {
@@ -124,15 +139,13 @@ export default function DetectPage() {
           status: "completed",
         });
 
-        console.log("Scan results saved to Firestore successfully");
+        // console.log("Scan results saved to Firestore successfully");
       } catch (firestoreError) {
-        console.error("Error saving to Firestore:", firestoreError);
-        // Don't fail the entire operation if Firestore save fails
-        // Just log the error and continue showing results
-        console.warn("Results displayed but not saved to history");
+        // console.error("Error saving to Firestore:", firestoreError);
+        // console.warn("Results displayed but not saved to history");
       }
     } catch (err) {
-      console.error("Error during file upload:", err);
+      // console.error("Error during file upload:", err);
       setError(
         err instanceof Error ? err.message : "An error occurred during analysis"
       );
@@ -199,23 +212,26 @@ export default function DetectPage() {
     ],
   };
 
-  // const anomalyScoresData = {
-  //   labels: results
-  //     ? Array.from(
-  //         { length: results.anomaly_scores?.length || 0 },
-  //         (_, i) => i + 1
-  //       )
-  //     : [],
-  //   datasets: [
-  //     {
-  //       label: "Anomaly Scores",
-  //       data: results ? results.anomaly_scores || [] : [],
-  //       borderColor: "rgb(59, 130, 246)",
-  //       backgroundColor: "rgba(59, 130, 246, 0.5)",
-  //       tension: 0.1,
-  //     },
-  //   ],
-  // };
+  // In your detect page, update the anomaly scores chart data:
+  const anomalyScoresData = {
+    labels: results?.results?.anomaly_scores_summary
+      ? ["Min Score", "Average Score", "Max Score"]
+      : [],
+    datasets: [
+      {
+        label: "Anomaly Score Statistics",
+        data: results?.results?.anomaly_scores_summary
+          ? [
+              results.results.anomaly_scores_summary.min,
+              results.results.anomaly_scores_summary.avg,
+              results.results.anomaly_scores_summary.max,
+            ]
+          : [],
+        borderColor: "rgb(59, 130, 246)",
+        backgroundColor: "rgba(59, 130, 246, 0.5)",
+      },
+    ],
+  };
 
   return (
     <div className="grid grid-rows-[80px_1fr_60px] items-center justify-items-center min-h-screen p-8 pb-20 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
@@ -348,30 +364,23 @@ export default function DetectPage() {
                   />
                 </div>
 
-                {/* {results.anomaly_scores &&
-                  results.anomaly_scores.length > 0 && (
-                    <div className="bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg p-6">
-                      <h3 className="text-xl font-semibold mb-4">
-                        Anomaly Scores Over Time
-                      </h3>
-                      <Line
-                        data={anomalyScoresData}
-                        options={{
-                          responsive: true,
-                          plugins: {
-                            legend: {
-                              position: "top",
-                            },
-                          },
-                          scales: {
-                            y: {
-                              beginAtZero: true,
-                            },
-                          },
-                        }}
-                      />
-                    </div>
-                  )} */}
+                {/* New section for anomaly score statistics */}
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-semibold mb-4">
+                    Anomaly Score Statistics
+                  </h3>
+                  <Bar
+                    data={anomalyScoresData}
+                    options={{
+                      responsive: true,
+                      plugins: {
+                        legend: {
+                          position: "top",
+                        },
+                      },
+                    }}
+                  />
+                </div>
               </div>
             </div>
           )}
