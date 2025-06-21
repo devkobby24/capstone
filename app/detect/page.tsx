@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { saveUserScan } from "@/lib/firestore";
 import {
@@ -17,7 +17,6 @@ import {
 import { Bar, Line } from "react-chartjs-2";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { db } from "@/firebaseconfig";
 import { toast } from "sonner";
 
 ChartJS.register(
@@ -366,7 +365,7 @@ export default function DetectPage() {
                 </div>
 
                 {/* New section for anomaly score statistics */}
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg p-6">
+                {/* <div className="bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg p-6">
                   <h3 className="text-xl font-semibold mb-4">
                     Anomaly Score Statistics
                   </h3>
@@ -381,7 +380,7 @@ export default function DetectPage() {
                       },
                     }}
                   />
-                </div>
+                </div> */}
               </div>
             </div>
           )}

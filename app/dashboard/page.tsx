@@ -40,6 +40,7 @@ export default function DashboardPage() {
     riskLevel: "Low" as 'Low' | 'Medium' | 'High',
   });
   const [recentScans, setRecentScans] = useState<any[]>([]);
+  const [allScans, setAllScans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useUser();
 
@@ -52,68 +53,181 @@ export default function DashboardPage() {
   const loadUserData = async () => {
     try {
       setIsLoading(true);
-      const [userStats, userScans] = await Promise.all([
+      const [userStats, userScans, allUserScans] = await Promise.all([
         getUserStats(user!.id),
-        getUserScans(user!.id, 5)
+        getUserScans(user!.id, 5), // Recent 5 scans
+        getUserScans(user!.id, 50) // All scans for analytics
       ]);
 
       setStats(userStats);
       setRecentScans(userScans.map(scan => ({
         id: scan.id,
         filename: scan.filename,
-        date: scan.uploadDate.toISOString().split('T')[0],
+        date: scan.uploadDate instanceof Date 
+          ? scan.uploadDate.toISOString().split('T')[0]
+          : new Date(scan.uploadDate).toISOString().split('T')[0],
         anomalies: scan.results.anomalies_detected,
         status: scan.status,
         riskLevel: scan.riskLevel,
       })));
+      setAllScans(allUserScans);
     } catch (error) {
       console.error('Error loading user data:', error);
+      // Keep default values on error
     } finally {
       setIsLoading(false);
     }
   };
 
-  const threatDistributionData = {
-    labels: ["Normal Traffic", "Suspicious Activity", "Malicious Traffic"],
-    datasets: [
-      {
-        data: [75, 15, 10],
+  // Generate threat distribution data from real scan results
+  const generateThreatDistributionData = () => {
+    if (allScans.length === 0) {
+      return {
+        labels: ["No Data Available"],
+        datasets: [{
+          data: [1],
+          backgroundColor: ["rgba(156, 163, 175, 0.8)"],
+          borderWidth: 0,
+        }],
+      };
+    }
+
+    const totalNormal = allScans.reduce((sum, scan) => sum + (scan.results?.normal_records || 0), 0);
+    const totalAnomalies = allScans.reduce((sum, scan) => sum + (scan.results?.anomalies_detected || 0), 0);
+    
+    // Categorize anomalies by severity (based on anomaly rate)
+    let highRisk = 0;
+    let mediumRisk = 0;
+    let lowRisk = 0;
+
+    allScans.forEach(scan => {
+      const anomalyRate = scan.results?.anomaly_rate || 0;
+      const anomalies = scan.results?.anomalies_detected || 0;
+      
+      if (anomalyRate > 20) {
+        highRisk += anomalies;
+      } else if (anomalyRate > 10) {
+        mediumRisk += anomalies;
+      } else {
+        lowRisk += anomalies;
+      }
+    });
+
+    return {
+      labels: ["Normal Traffic", "Low Risk Anomalies", "Medium Risk Anomalies", "High Risk Anomalies"],
+      datasets: [{
+        data: [totalNormal, lowRisk, mediumRisk, highRisk],
         backgroundColor: [
           "rgba(34, 197, 94, 0.8)",
           "rgba(251, 191, 36, 0.8)",
+          "rgba(249, 115, 22, 0.8)",
           "rgba(239, 68, 68, 0.8)",
         ],
         borderWidth: 0,
-      },
-    ],
+      }],
+    };
   };
 
-  const weeklyTrendsData = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-      {
-        label: "Anomalies Detected",
-        data: [12, 8, 15, 6, 18, 5, 9],
-        borderColor: "rgb(239, 68, 68)",
-        backgroundColor: "rgba(239, 68, 68, 0.1)",
-        tension: 0.4,
-      },
-      {
-        label: "Total Scans",
-        data: [25, 22, 28, 20, 30, 18, 24],
-        borderColor: "rgb(59, 130, 246)",
-        backgroundColor: "rgba(59, 130, 246, 0.1)",
-        tension: 0.4,
-      },
-    ],
+  // Generate weekly trends from real data
+  const generateWeeklyTrendsData = () => {
+    if (allScans.length === 0) {
+      return {
+        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        datasets: [{
+          label: "No Data Available",
+          data: [0, 0, 0, 0, 0, 0, 0],
+          borderColor: "rgb(156, 163, 175)",
+          backgroundColor: "rgba(156, 163, 175, 0.1)",
+          tension: 0.4,
+        }],
+      };
+    }
+
+    // Group scans by day of the week for the last 7 days
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      return date;
+    });
+
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const weeklyAnomalies = new Array(7).fill(0);
+    const weeklyScans = new Array(7).fill(0);
+
+    allScans.forEach(scan => {
+      const scanDate = scan.uploadDate instanceof Date ? scan.uploadDate : new Date(scan.uploadDate);
+      const dayIndex = last7Days.findIndex(date => 
+        date.toDateString() === scanDate.toDateString()
+      );
+      
+      if (dayIndex !== -1) {
+        weeklyAnomalies[dayIndex] += scan.results?.anomalies_detected || 0;
+        weeklyScans[dayIndex] += 1;
+      }
+    });
+
+    return {
+      labels: last7Days.map(date => dayNames[date.getDay()]),
+      datasets: [
+        {
+          label: "Anomalies Detected",
+          data: weeklyAnomalies,
+          borderColor: "rgb(239, 68, 68)",
+          backgroundColor: "rgba(239, 68, 68, 0.1)",
+          tension: 0.4,
+        },
+        {
+          label: "Total Scans",
+          data: weeklyScans,
+          borderColor: "rgb(59, 130, 246)",
+          backgroundColor: "rgba(59, 130, 246, 0.1)",
+          tension: 0.4,
+        },
+      ],
+    };
   };
 
-  const systemPerformanceData = {
-    labels: ["Processing Speed", "Accuracy", "Memory Usage", "CPU Usage"],
-    datasets: [
-      {
-        label: "Performance Metrics",
-        data: [95, 97, 65, 45],
+  // Generate system performance metrics from real data
+  const generateSystemPerformanceData = () => {
+    if (allScans.length === 0) {
+      return {
+        labels: ["Processing Speed", "Detection Rate", "Data Processed", "Scans Completed"],
+        datasets: [{
+          label: "No Data Available",
+          data: [0, 0, 0, 0],
+          backgroundColor: ["rgba(156, 163, 175, 0.6)"],
+          borderColor: ["rgb(156, 163, 175)"],
+          borderWidth: 1,
+        }],
+      };
+    }
+
+    // Calculate metrics from real data
+    const avgProcessingTime = allScans.reduce((sum, scan) => 
+      sum + (scan.results?.processing_time || 0), 0) / allScans.length;
+    
+    const totalRecords = allScans.reduce((sum, scan) => 
+      sum + (scan.results?.total_records || 0), 0);
+    
+    const avgDetectionRate = allScans.reduce((sum, scan) => 
+      sum + (scan.results?.anomaly_rate || 0), 0) / allScans.length;
+
+    // Convert to percentage values for display
+    const processingSpeedScore = Math.max(0, Math.min(100, 100 - (avgProcessingTime * 10))); // Lower time = higher score
+    const detectionRateScore = Math.min(100, avgDetectionRate * 5); // Scale anomaly rate
+    const dataProcessedScore = Math.min(100, (totalRecords / 1000) * 10); // Scale based on total records
+    const completionRate = (allScans.filter(scan => scan.status === 'completed').length / allScans.length) * 100;
+
+    return {
+      labels: ["Processing Speed", "Detection Rate", "Data Processed", "Completion Rate"],
+      datasets: [{
+        label: "Performance Metrics (%)",
+        data: [
+          Math.round(processingSpeedScore),
+          Math.round(detectionRateScore),
+          Math.round(dataProcessedScore),
+          Math.round(completionRate)
+        ],
         backgroundColor: [
           "rgba(34, 197, 94, 0.6)",
           "rgba(59, 130, 246, 0.6)",
@@ -127,8 +241,8 @@ export default function DashboardPage() {
           "rgb(168, 85, 247)",
         ],
         borderWidth: 1,
-      },
-    ],
+      }],
+    };
   };
 
   const getRiskLevelColor = (level: string) => {
@@ -156,7 +270,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 p-10">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 p-0 md:p-10">
       <Header />
       
       <main className="container mx-auto px-4 py-8 max-w-7xl">
@@ -253,7 +367,7 @@ export default function DashboardPage() {
             </h3>
             <div className="h-64">
               <Doughnut
-                data={threatDistributionData}
+                data={generateThreatDistributionData()}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -273,7 +387,7 @@ export default function DashboardPage() {
             </h3>
             <div className="h-64">
               <Line
-                data={weeklyTrendsData}
+                data={generateWeeklyTrendsData()}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -301,7 +415,7 @@ export default function DashboardPage() {
             </h3>
             <div className="h-64">
               <Bar
-                data={systemPerformanceData}
+                data={generateSystemPerformanceData()}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -326,21 +440,31 @@ export default function DashboardPage() {
               Recent Scans
             </h3>
             <div className="space-y-4">
-              {recentScans.map((scan) => (
-                <div key={scan.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {scan.filename}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {scan.date} • {scan.anomalies} anomalies
-                    </p>
+              {recentScans.length > 0 ? (
+                recentScans.map((scan) => (
+                  <div key={scan.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {scan.filename}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {scan.date} • {scan.anomalies} anomalies
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskLevelColor(scan.riskLevel)}`}>
+                      {scan.riskLevel}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskLevelColor(scan.riskLevel)}`}>
-                    {scan.riskLevel}
-                  </span>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p>No scans performed yet</p>
+                  <p className="text-sm">Start by uploading a dataset to analyze</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
