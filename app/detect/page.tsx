@@ -96,10 +96,9 @@ export default function DetectPage() {
     formData.append("file", file);
 
     try {
-      // console.log("Sending file to backend:", file.name);
 
       // Call your backend API
-      const response = await fetch("http://localhost:8000/api/analyze", {
+      const response = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
       });
