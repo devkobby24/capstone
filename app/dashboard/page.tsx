@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import { getUserScans, getUserStats } from "@/lib/firestore";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -32,40 +34,45 @@ ChartJS.register(
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
-    totalScans: 156,
-    anomaliesDetected: 23,
-    normalTraffic: 133,
-    riskLevel: "Medium",
+    totalScans: 0,
+    anomaliesDetected: 0,
+    normalTraffic: 0,
+    riskLevel: "Low" as 'Low' | 'Medium' | 'High',
   });
+  const [recentScans, setRecentScans] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useUser();
 
-  const [recentScans, setRecentScans] = useState([
-    {
-      id: 1,
-      filename: "network_traffic_2024.csv",
-      date: "2024-06-17",
-      anomalies: 5,
-      status: "completed",
-      riskLevel: "Low",
-    },
-    {
-      id: 2,
-      filename: "cicids_sample.csv",
-      date: "2024-06-16",
-      anomalies: 12,
-      status: "completed",
-      riskLevel: "High",
-    },
-    {
-      id: 3,
-      filename: "enterprise_logs.csv",
-      date: "2024-06-15",
-      anomalies: 3,
-      status: "completed",
-      riskLevel: "Low",
-    },
-  ]);
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+    }
+  }, [user]);
 
-  // Chart data
+  const loadUserData = async () => {
+    try {
+      setIsLoading(true);
+      const [userStats, userScans] = await Promise.all([
+        getUserStats(user!.id),
+        getUserScans(user!.id, 5)
+      ]);
+
+      setStats(userStats);
+      setRecentScans(userScans.map(scan => ({
+        id: scan.id,
+        filename: scan.filename,
+        date: scan.uploadDate.toISOString().split('T')[0],
+        anomalies: scan.results.anomalies_detected,
+        status: scan.status,
+        riskLevel: scan.riskLevel,
+      })));
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const threatDistributionData = {
     labels: ["Normal Traffic", "Suspicious Activity", "Malicious Traffic"],
     datasets: [
@@ -136,6 +143,17 @@ export default function DashboardPage() {
         return "text-gray-600 bg-gray-100";
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 p-10">
