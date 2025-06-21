@@ -199,23 +199,23 @@ export default function DetectPage() {
     ],
   };
 
-  const anomalyScoresData = {
-    labels: results
-      ? Array.from(
-          { length: results.anomaly_scores?.length || 0 },
-          (_, i) => i + 1
-        )
-      : [],
-    datasets: [
-      {
-        label: "Anomaly Scores",
-        data: results ? results.anomaly_scores || [] : [],
-        borderColor: "rgb(59, 130, 246)",
-        backgroundColor: "rgba(59, 130, 246, 0.5)",
-        tension: 0.1,
-      },
-    ],
-  };
+  // const anomalyScoresData = {
+  //   labels: results
+  //     ? Array.from(
+  //         { length: results.anomaly_scores?.length || 0 },
+  //         (_, i) => i + 1
+  //       )
+  //     : [],
+  //   datasets: [
+  //     {
+  //       label: "Anomaly Scores",
+  //       data: results ? results.anomaly_scores || [] : [],
+  //       borderColor: "rgb(59, 130, 246)",
+  //       backgroundColor: "rgba(59, 130, 246, 0.5)",
+  //       tension: 0.1,
+  //     },
+  //   ],
+  // };
 
   return (
     <div className="grid grid-rows-[80px_1fr_60px] items-center justify-items-center min-h-screen p-8 pb-20 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
@@ -348,7 +348,7 @@ export default function DetectPage() {
                   />
                 </div>
 
-                {results.anomaly_scores &&
+                {/* {results.anomaly_scores &&
                   results.anomaly_scores.length > 0 && (
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg p-6">
                       <h3 className="text-xl font-semibold mb-4">
@@ -371,7 +371,7 @@ export default function DetectPage() {
                         }}
                       />
                     </div>
-                  )}
+                  )} */}
               </div>
             </div>
           )}
