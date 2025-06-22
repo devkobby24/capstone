@@ -11,7 +11,7 @@ export default function About() {
       <main className="flex flex-col gap-[32px] row-start-2 items-center w-full max-w-7xl">
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            About intruScan
+            About IntruScan
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
             Advanced network security solution powered by machine learning
@@ -23,7 +23,7 @@ export default function About() {
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold mb-4">Our Mission</h2>
               <p className="text-gray-600 dark:text-gray-300">
-                intruScan is dedicated to providing cutting-edge network
+                IntruScan is dedicated to providing cutting-edge network
                 security solutions that help organizations protect their digital
                 assets from emerging threats. Our advanced anomaly detection
                 system uses machine learning to identify potential security
