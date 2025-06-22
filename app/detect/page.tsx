@@ -295,7 +295,7 @@ export default function DetectPage() {
           </div>
 
           {file && (
-            <div className="mt-4 flex justify-center">
+            <div className="mt-4 flex flex-col items-center gap-4">
               <button
                 onClick={handleUpload}
                 disabled={isUploading}
@@ -303,6 +303,18 @@ export default function DetectPage() {
               >
                 {isUploading ? "Analyzing..." : "Analyze Dataset"}
               </button>
+              
+              {isUploading && (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Processing your file... This may take several minutes for large datasets.
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    File: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
