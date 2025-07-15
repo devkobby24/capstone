@@ -21,13 +21,13 @@ def focal_loss_fn(y_true, y_pred, alpha=0.25, gamma=2.0):
     y_pred = tf.cast(y_pred, tf.float32)
     
     # Clip predictions to prevent log(0)
-    epsilon = tf.keras.backend.epsilon()
+    epsilon = tf.keras.backend.epsilon() # type: ignore
     y_pred = tf.clip_by_value(y_pred, epsilon, 1. - epsilon)
     
     # Calculate focal loss
-    ce_loss = -y_true * tf.math.log(y_pred)
-    p_t = y_true * y_pred + (1 - y_true) * (1 - y_pred)
-    alpha_t = y_true * alpha + (1 - y_true) * (1 - alpha)
+    ce_loss = -y_true * tf.math.log(y_pred) # type: ignore
+    p_t = y_true * y_pred + (1 - y_true) * (1 - y_pred) # type: ignore
+    alpha_t = y_true * alpha + (1 - y_true) * (1 - alpha) # type: ignore
     focal_loss = alpha_t * tf.pow(1 - p_t, gamma) * ce_loss
     
     return tf.reduce_mean(focal_loss)
@@ -47,7 +47,7 @@ def load_model():
             # Load model with custom objects - try different approaches
             try:
                 # First try with custom_objects
-                model = tf.keras.models.load_model(
+                model = tf.keras.models.load_model( # type: ignore
                     model_path, 
                     custom_objects={'focal_loss_fn': focal_loss_fn}
                 )
@@ -55,7 +55,7 @@ def load_model():
                 print(f"First attempt failed: {e1}")
                 try:
                     # Second try: load without compiling
-                    model = tf.keras.models.load_model(model_path, compile=False)
+                    model = tf.keras.models.load_model(model_path, compile=False) # type: ignore
                     print("Model loaded without compilation")
                     
                     # Recompile with a standard loss for inference
@@ -90,7 +90,7 @@ def analyze():
         print(f"Processing file: {file.filename}")
         
         # Read CSV
-        df = pd.read_csv(file)
+        df = pd.read_csv(file) # type: ignore
         total_records = len(df)
         print(f"Dataset shape: {df.shape}")
         
