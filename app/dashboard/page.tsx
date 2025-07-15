@@ -436,9 +436,16 @@ export default function DashboardPage() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-              Recent Scans
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Recent Scans
+              </h3>
+              {recentScans.length > 0 && (
+                <Link href="/history" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium">
+                  See More
+                </Link>
+              )}
+            </div>
             <div className="space-y-4">
               {recentScans.length > 0 ? (
                 recentScans.map((scan) => (

@@ -1,6 +1,6 @@
 // filepath: lib/firestore.ts
 import { db } from '../firebaseconfig';
-import { collection, addDoc, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, limit, getDoc, doc } from 'firebase/firestore';
 
 export interface ScanResult {
     id?: string;
@@ -77,6 +77,28 @@ export const saveUserScan = async (scanData: Omit<ScanResult, 'id'>) => {
     throw error;
   }
 };
+
+export async function getScanById(scanId: string) {
+  try {
+    const scanDoc = await getDoc(doc(db, 'user_scans', scanId));
+    
+    if (!scanDoc.exists()) {
+      console.log('Scan document not found');
+      return null;
+    }
+
+    const data = scanDoc.data();
+    console.log('Scan data loaded:', { id: scanDoc.id, userId: data.userId });
+    
+    return {
+      id: scanDoc.id,
+      ...data
+    };
+  } catch (error) {
+    console.error('Error getting scan by ID:', error);
+    throw error;
+  }
+}
 
 export const getUserScans = async (userId: string, limitCount: number = 10) => {
     try {
