@@ -36,7 +36,7 @@ def load_model():
     global model
     if model is None:
         try:
-            model_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'FINAL_CICIDS_MODEL.keras')
+            model_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'final_hybrid_cnn_bilstm_model.keras')
             
             print(f"Loading model from: {model_path}")
             
@@ -171,21 +171,21 @@ def preprocess_data(df):
         scaler = StandardScaler()
         processed_data = scaler.fit_transform(processed_data)
         
-        # CRITICAL: Reshape to match model input shape (None, 10, 2)
-        # Your model expects sequences of length 10 with 2 features each
+        # CRITICAL: Reshape to match model input shape (None, 10, 3)
+        # Your model expects sequences of length 10 with 3 features each
         
-        # Take first 20 features to reshape into (10, 2)
-        if processed_data.shape[1] >= 20:
-            # Take first 20 features
-            processed_data = processed_data[:, :20]
+        # Take first 30 features to reshape into (10, 3)
+        if processed_data.shape[1] >= 30:
+            # Take first 30 features
+            processed_data = processed_data[:, :30]
         else:
-            # Pad with zeros if less than 20 features
+            # Pad with zeros if less than 30 features
             num_features = processed_data.shape[1]
-            padding = np.zeros((processed_data.shape[0], 20 - num_features))
+            padding = np.zeros((processed_data.shape[0], 30 - num_features))
             processed_data = np.concatenate([processed_data, padding], axis=1)
         
-        # Reshape to (batch_size, 10, 2)
-        processed_data = processed_data.reshape(processed_data.shape[0], 10, 2)
+        # Reshape to (batch_size, 10, 3)
+        processed_data = processed_data.reshape(processed_data.shape[0], 10, 3)
         
         print(f"Final processed data shape: {processed_data.shape}")
         return processed_data
