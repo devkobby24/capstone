@@ -7,6 +7,7 @@ import { getScanById } from "@/lib/firestore";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import Link from "next/link";
+import { toast } from "sonner";
 
 interface ScanData {
   id: string;
@@ -41,10 +42,10 @@ export default function ScanResultPage() {
 
   useEffect(() => {
     if (isLoaded && !user) {
-      router.push('/sign-in');
+      router.push("/sign-in");
       return;
     }
-    
+
     if (user && id) {
       loadScanResult();
     }
@@ -54,9 +55,9 @@ export default function ScanResultPage() {
     try {
       setIsLoading(true);
       setError(null);
-      
-      console.log('Loading scan with ID:', id);
-      console.log('Current user ID:', user?.id);
+
+      // console.log('Loading scan with ID:', id);
+      // console.log('Current user ID:', user?.id);
 
       const scanData = await getScanById(id as string);
 
@@ -73,11 +74,11 @@ export default function ScanResultPage() {
 
       setScan(scanData as ScanData);
     } catch (error: any) {
-      console.error('Error loading scan result:', error);
-      
-      if (error.code === 'permission-denied') {
+      toast("Error loading scan result");
+
+      if (error.code === "permission-denied") {
         setError("You don't have permission to view this scan");
-      } else if (error.code === 'not-found') {
+      } else if (error.code === "not-found") {
         setError("Scan not found");
       } else {
         setError("Failed to load scan result. Please try again.");
@@ -171,7 +172,7 @@ export default function ScanResultPage() {
                   Back to History
                 </button>
               </Link>
-              <button 
+              <button
                 onClick={loadScanResult}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
               >

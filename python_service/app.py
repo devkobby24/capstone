@@ -120,12 +120,12 @@ def analyze():
         normal_records = total_records - anomalies_detected
         anomaly_rate = float(np.mean(anomalies) * 100)
         
+        # In your Python service, update the results structure
         results = {
             'total_records': total_records,
-            'anomalies_detected': anomalies_detected,
+            'anomalies_detected': int(anomalies_detected),
             'normal_records': normal_records,
             'anomaly_rate': anomaly_rate,
-            'anomaly_scores': anomaly_scores.tolist(),
             'processing_time': time.time() - start_time,
             'results': {
                 'anomaly_scores_summary': {

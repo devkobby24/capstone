@@ -6,6 +6,7 @@ import { getUserScans } from "@/lib/firestore";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function HistoryPage() {
   const [scans, setScans] = useState<any[]>([]);
@@ -30,13 +31,14 @@ export default function HistoryPage() {
     try {
       setIsLoading(true);
       const userScans = await getUserScans(user!.id, 100); // Get all scans
-      
-      const formattedScans = userScans.map(scan => ({
+
+      const formattedScans = userScans.map((scan) => ({
         id: scan.id,
         filename: scan.filename,
-        date: scan.uploadDate instanceof Date 
-          ? scan.uploadDate 
-          : new Date(scan.uploadDate),
+        date:
+          scan.uploadDate instanceof Date
+            ? scan.uploadDate
+            : scan.uploadDate.toDate(),
         anomalies: scan.results.anomalies_detected,
         totalRecords: scan.results.total_records,
         anomalyRate: scan.results.anomaly_rate,
@@ -48,7 +50,7 @@ export default function HistoryPage() {
 
       setScans(formattedScans);
     } catch (error) {
-      console.error('Error loading user scans:', error);
+      toast("Error loading user scans");
     } finally {
       setIsLoading(false);
     }
@@ -59,23 +61,27 @@ export default function HistoryPage() {
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(scan => 
+      filtered = filtered.filter((scan) =>
         scan.filename.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Status filter
     if (filterStatus !== "all") {
-      filtered = filtered.filter(scan => scan.status === filterStatus);
+      filtered = filtered.filter((scan) => scan.status === filterStatus);
     }
 
     // Risk filter
     if (filterRisk !== "all") {
-      filtered = filtered.filter(scan => scan.riskLevel.toLowerCase() === filterRisk);
+      filtered = filtered.filter(
+        (scan) => scan.riskLevel.toLowerCase() === filterRisk
+      );
     }
 
     // Sort by date (newest first)
-    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    filtered.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
 
     setFilteredScans(filtered);
   };
@@ -107,12 +113,12 @@ export default function HistoryPage() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -121,7 +127,9 @@ export default function HistoryPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading scan history...</p>
+          <p className="text-gray-600 dark:text-gray-300">
+            Loading scan history...
+          </p>
         </div>
       </div>
     );
@@ -130,12 +138,15 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <Link href="/dashboard" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+            <Link
+              href="/dashboard"
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            >
               ← Back to Dashboard
             </Link>
           </div>
@@ -203,7 +214,10 @@ export default function HistoryPage() {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer p-6 h-full flex flex-col">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0 pr-4">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2 truncate" title={scan.filename}>
+                      <h3
+                        className="font-semibold text-gray-900 dark:text-white mb-2 truncate"
+                        title={scan.filename}
+                      >
                         {scan.filename}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -211,10 +225,18 @@ export default function HistoryPage() {
                       </p>
                     </div>
                     <div className="flex flex-col gap-2 flex-shrink-0">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-center whitespace-nowrap ${getRiskLevelColor(scan.riskLevel)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium text-center whitespace-nowrap ${getRiskLevelColor(
+                          scan.riskLevel
+                        )}`}
+                      >
                         {scan.riskLevel}
                       </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-center whitespace-nowrap ${getStatusColor(scan.status)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium text-center whitespace-nowrap ${getStatusColor(
+                          scan.status
+                        )}`}
+                      >
                         {scan.status}
                       </span>
                     </div>
@@ -222,19 +244,25 @@ export default function HistoryPage() {
 
                   <div className="space-y-3 flex-1">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Total Records</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Total Records
+                      </span>
                       <span className="font-medium text-gray-900 dark:text-white text-right">
                         {scan.totalRecords?.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Anomalies</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Anomalies
+                      </span>
                       <span className="font-medium text-red-600 text-right">
                         {scan.anomalies?.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Anomaly Rate</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Anomaly Rate
+                      </span>
                       <span className="font-medium text-gray-900 dark:text-white text-right">
                         {scan.anomalyRate?.toFixed(2)}%
                       </span>
@@ -243,9 +271,13 @@ export default function HistoryPage() {
 
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Processing Time</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Processing Time
+                      </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-white text-right">
-                        {scan.processingTime ? `${scan.processingTime.toFixed(2)}s` : 'N/A'}
+                        {scan.processingTime
+                          ? `${scan.processingTime.toFixed(2)}s`
+                          : "N/A"}
                       </span>
                     </div>
                   </div>
@@ -260,10 +292,22 @@ export default function HistoryPage() {
             ))
           ) : (
             <div className="col-span-full text-center py-12">
-              <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                className="w-16 h-16 mx-auto mb-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
-              <p className="text-gray-500 dark:text-gray-400 text-lg">No scans found</p>
+              <p className="text-gray-500 dark:text-gray-400 text-lg">
+                No scans found
+              </p>
               <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
                 Try adjusting your search or filters
               </p>
