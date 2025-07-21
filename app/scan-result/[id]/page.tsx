@@ -4,10 +4,37 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { getScanById } from "@/lib/firestore";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import Link from "next/link";
 import { toast } from "sonner";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+interface ClassDistribution {
+  [key: string]: number;
+}
 
 interface ScanData {
   id: string;
@@ -15,20 +42,20 @@ interface ScanData {
   filename: string;
   uploadDate: any;
   status: string;
+  riskLevel?: string;
   results: {
     total_records: number;
     anomalies_detected: number;
     normal_records: number;
     anomaly_rate: number;
     processing_time: number;
-    results?: {
-      anomaly_scores_summary?: {
-        min: number;
-        max: number;
-        avg: number;
-      };
-      class_distribution?: { [key: string]: number };
+    anomaly_scores_summary?: {
+      min: number;
+      max: number;
+      avg: number;
+      count: number;
     };
+    class_distribution?: ClassDistribution;
   };
 }
 
@@ -55,9 +82,6 @@ export default function ScanResultPage() {
     try {
       setIsLoading(true);
       setError(null);
-
-      // console.log('Loading scan with ID:', id);
-      // console.log('Current user ID:', user?.id);
 
       const scanData = await getScanById(id as string);
 
@@ -88,35 +112,73 @@ export default function ScanResultPage() {
     }
   };
 
-  // Show loading if user data is not loaded yet
-  if (!isLoaded || (isLoaded && !user)) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const calculateRiskLevel = (anomalyRate: number) => {
+  // Helper functions
+  const calculateRiskLevel = (anomalyRate: number): "Low" | "Medium" | "High" => {
     if (anomalyRate > 20) return "High";
     if (anomalyRate > 10) return "Medium";
     return "Low";
   };
 
-  const getRiskLevelColor = (level: string) => {
+  const getClassLabel = (classKey: string): string => {
+    const labels: { [key: string]: string } = {
+      class_0: "Normal Traffic",
+      class_1: "DDoS Attack",
+      class_2: "Port Scan",
+      class_3: "Bot Attack",
+      class_4: "Infiltration",
+      class_5: "Web Attack",
+      class_6: "Brute Force",
+      class_7: "SQL Injection",
+      class_8: "XSS Attack",
+    };
+    return labels[classKey] || classKey;
+  };
+
+  const getClassColor = (classKey: string): string => {
+    const colors: { [key: string]: string } = {
+      class_0: "#22c55e",
+      class_1: "#ef4444",
+      class_2: "#f97316",
+      class_3: "#eab308",
+      class_4: "#a855f7",
+      class_5: "#ec4899",
+      class_6: "#06b6d4",
+      class_7: "#8b5cf6",
+      class_8: "#f59e0b",
+    };
+    return colors[classKey] || "#6b7280";
+  };
+
+  const getRiskLevelColor = (level: string): string => {
     switch (level.toLowerCase()) {
       case "high":
-        return "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900";
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
       case "medium":
-        return "text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900";
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
       case "low":
-        return "text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900";
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
       default:
-        return "text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-700";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
     }
+  };
+
+  const getClassDistributionChartData = (classDistribution: ClassDistribution) => {
+    const labels = Object.keys(classDistribution).map((key) => getClassLabel(key));
+    const data = Object.values(classDistribution);
+    const colors = Object.keys(classDistribution).map((key) => getClassColor(key));
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Attack Types",
+          data,
+          backgroundColor: colors.map((color) => color + "80"),
+          borderColor: colors,
+          borderWidth: 1,
+        },
+      ],
+    };
   };
 
   const formatDate = (date: any) => {
@@ -130,14 +192,24 @@ export default function ScanResultPage() {
     });
   };
 
+  // Show loading if user data is not loaded yet
+  if (!isLoaded || (isLoaded && !user)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">
-            Loading scan result...
-          </p>
+          <p className="text-gray-600 dark:text-gray-300">Loading scan result...</p>
         </div>
       </div>
     );
@@ -148,9 +220,9 @@ export default function ScanResultPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
         <Header />
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 text-center">
             <svg
-              className="w-16 h-16 mx-auto mb-4 text-red-500"
+              className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 text-red-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -162,11 +234,11 @@ export default function ScanResultPage() {
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
               />
             </svg>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2">
               Error
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/history">
                 <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
                   Back to History
@@ -191,191 +263,290 @@ export default function ScanResultPage() {
   }
 
   const results = scan.results;
-  const riskLevel = calculateRiskLevel(results.anomaly_rate);
+  const riskLevel = scan.riskLevel || calculateRiskLevel(results.anomaly_rate);
+
+  // Prepare chart data
+  const distributionData = {
+    labels: ["Normal Traffic", "Anomalous Traffic"],
+    datasets: [
+      {
+        label: "Traffic Distribution",
+        data: [results.normal_records, results.anomalies_detected],
+        backgroundColor: ["rgba(34, 197, 94, 0.6)", "rgba(239, 68, 68, 0.6)"],
+        borderColor: ["rgb(34, 197, 94)", "rgb(239, 68, 68)"],
+        borderWidth: 1,
+      },
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950">
       <Header />
 
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Navigation */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Link
               href="/history"
-              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm md:text-base"
             >
               ← Back to History
             </Link>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2">
             Scan Result Details
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-gray-600 dark:text-gray-300 text-sm md:text-base">
             {scan.filename} • {formatDate(scan.uploadDate)}
           </p>
         </div>
 
-        {/* Result Summary */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Analysis Summary
-            </h2>
-            <span
-              className={`px-4 py-2 rounded-full text-sm font-medium ${getRiskLevelColor(
-                riskLevel
-              )}`}
-            >
-              {riskLevel} Risk
-            </span>
+        {/* Statistics Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 md:mb-8">
+          <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <p className="text-sm text-gray-500 mb-2">Total Records</p>
+            <p className="text-xl md:text-2xl font-bold">
+              {results.total_records?.toLocaleString() || 0}
+            </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                {results.total_records?.toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Total Records
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-red-600 mb-2">
-                {results.anomalies_detected?.toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Anomalies Detected
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">
-                {results.normal_records?.toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Normal Records
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">
-                {results.anomaly_rate?.toFixed(2)}%
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Anomaly Rate
-              </div>
-            </div>
+          <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <p className="text-sm text-gray-500 mb-2">Anomalies Detected</p>
+            <p className="text-xl md:text-2xl font-bold text-red-600">
+              {results.anomalies_detected?.toLocaleString() || 0}
+            </p>
+          </div>
+          <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <p className="text-sm text-gray-500 mb-2">Normal Records</p>
+            <p className="text-xl md:text-2xl font-bold text-green-600">
+              {results.normal_records?.toLocaleString() || 0}
+            </p>
+          </div>
+          <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <p className="text-sm text-gray-500 mb-2">Anomaly Rate</p>
+            <p className="text-xl md:text-2xl font-bold">
+              {results.anomaly_rate ? results.anomaly_rate.toFixed(2) : "0.00"}%
+            </p>
           </div>
         </div>
 
-        {/* Detailed Results */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Anomaly Scores Summary */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Anomaly Scores Summary
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8 mb-6 md:mb-8">
+          {/* Traffic Distribution Chart */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6">
+            <h3 className="text-lg md:text-xl font-semibold mb-4">
+              Traffic Distribution
             </h3>
-            {results.results?.anomaly_scores_summary && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Minimum Score
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {results.results.anomaly_scores_summary.min?.toFixed(4)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Maximum Score
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {results.results.anomaly_scores_summary.max?.toFixed(4)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Average Score
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {results.results.anomaly_scores_summary.avg?.toFixed(4)}
-                  </span>
-                </div>
-              </div>
-            )}
+            <div className="h-64 md:h-80">
+              <Bar
+                data={distributionData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: "top",
+                    },
+                  },
+                }}
+              />
+            </div>
           </div>
 
+          {/* Anomaly Types Distribution */}
+          {results.class_distribution && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6">
+              <h3 className="text-lg md:text-xl font-semibold mb-4">
+                Anomaly Types Distribution
+              </h3>
+              <div className="h-64 md:h-80">
+                <Bar
+                  data={getClassDistributionChartData(results.class_distribution)}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: "top",
+                      },
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          precision: 0,
+                        },
+                      },
+                    },
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Detailed Breakdown - matching detect page */}
+        {results.class_distribution && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8">
+            <h3 className="text-lg md:text-xl font-semibold mb-4">
+              Detailed Attack Types Breakdown
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+              {Object.entries(results.class_distribution)
+                .sort(([, a], [, b]) => (b as number) - (a as number))
+                .map(([classKey, count]) => (
+                  <div
+                    key={classKey}
+                    className="flex justify-between items-center p-3 md:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                      <div
+                        className="w-3 h-3 md:w-4 md:h-4 rounded-full flex-shrink-0"
+                        style={{
+                          backgroundColor: getClassColor(classKey),
+                        }}
+                      />
+                      <span className="font-medium text-sm md:text-base truncate">
+                        {getClassLabel(classKey)}
+                      </span>
+                    </div>
+                    <div className="text-right ml-2 flex-shrink-0">
+                      <div className="font-bold text-sm md:text-base">
+                        {(count as number).toLocaleString()}
+                      </div>
+                      <div className="text-xs md:text-sm text-gray-500">
+                        {(((count as number) / results.total_records) * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Additional Information */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 mb-6 md:mb-8">
+          {/* Anomaly Scores Summary */}
+          {results.anomaly_scores_summary && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6">
+              <h3 className="text-lg md:text-xl font-semibold mb-4">
+                Anomaly Scores Summary
+              </h3>
+              <div className="space-y-3 md:space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                    Minimum Score
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                    {results.anomaly_scores_summary.min?.toFixed(4)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                    Maximum Score
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                    {results.anomaly_scores_summary.max?.toFixed(4)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                    Average Score
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                    {results.anomaly_scores_summary.avg?.toFixed(4)}
+                  </span>
+                </div>
+                {results.anomaly_scores_summary.count && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                      Sample Count
+                    </span>
+                    <span className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                      {results.anomaly_scores_summary.count.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Processing Information */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6">
+            <h3 className="text-lg md:text-xl font-semibold mb-4">
               Processing Information
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">
+                <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
                   Processing Time
                 </span>
-                <span className="font-medium text-gray-900 dark:text-white">
+                <span className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                   {results.processing_time
                     ? `${results.processing_time.toFixed(2)}s`
                     : "N/A"}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">
-                  File Size
+                <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                  Dataset Size
                 </span>
-                <span className="font-medium text-gray-900 dark:text-white">
+                <span className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
                   {results.total_records
                     ? `${results.total_records.toLocaleString()} records`
                     : "N/A"}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Status</span>
-                <span className="font-medium text-green-600">
+                <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                  Status
+                </span>
+                <span className="font-medium text-green-600 text-sm md:text-base capitalize">
                   {scan.status}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                  Scan Date
+                </span>
+                <span className="font-medium text-gray-900 dark:text-white text-sm md:text-base">
+                  {formatDate(scan.uploadDate)}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Class Distribution (if available) */}
-        {results.results?.class_distribution && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mt-8">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Class Distribution
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-              {Object.entries(results.results.class_distribution).map(
-                ([className, count]) => (
-                  <div key={className} className="text-center">
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                      {(count as number).toLocaleString()}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {className.replace("_", " ").toUpperCase()}
-                    </div>
-                  </div>
-                )
-              )}
+        {/* Risk Assessment */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8">
+          <h3 className="text-lg md:text-xl font-semibold mb-4">Risk Assessment</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+            <div className={`px-4 py-2 rounded-full text-sm font-medium w-fit ${getRiskLevelColor(riskLevel)}`}>
+              {riskLevel} Risk
             </div>
+            <span className="text-gray-600 dark:text-gray-300 text-sm md:text-base">
+              Based on {results.anomaly_rate?.toFixed(2)}% anomaly rate
+            </span>
           </div>
-        )}
+          <div className="text-sm text-gray-500">
+            <p>
+              This scan analyzed {results.total_records?.toLocaleString()} records and detected{" "}
+              {results.anomalies_detected?.toLocaleString()} anomalies ({results.anomaly_rate?.toFixed(2)}% of total traffic).
+            </p>
+          </div>
+        </div>
 
         {/* Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mt-8">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Actions
-          </h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-semibold mb-4">Actions</h3>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/detect">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
+              <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
                 Run New Analysis
               </button>
             </Link>
             <Link href="/history">
-              <button className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors">
+              <button className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors">
                 View All Scans
               </button>
             </Link>
