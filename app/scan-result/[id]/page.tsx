@@ -113,7 +113,9 @@ export default function ScanResultPage() {
   };
 
   // Helper functions
-  const calculateRiskLevel = (anomalyRate: number): "Low" | "Medium" | "High" => {
+  const calculateRiskLevel = (
+    anomalyRate: number
+  ): "Low" | "Medium" | "High" => {
     if (anomalyRate > 20) return "High";
     if (anomalyRate > 10) return "Medium";
     return "Low";
@@ -123,13 +125,13 @@ export default function ScanResultPage() {
     const labels: { [key: string]: string } = {
       class_0: "Normal Traffic",
       class_1: "DoS/DDoS Attack",
-      class_2: "Port Scan", 
+      class_2: "Port Scan",
       class_3: "Bot Attack",
-      class_4: "Infiltration",        // ✅ Already included
+      class_4: "Infiltration", // ✅ Already included
       class_5: "Web Attack",
       class_6: "Brute Force",
-      class_7: "Heartbleed",          // ✅ Added
-      class_8: "SQL Injection",       // ✅ Moved from class_7
+      class_7: "Heartbleed", // ✅ Added
+      class_8: "SQL Injection", // ✅ Moved from class_7
     };
     return labels[classKey] || classKey;
   };
@@ -162,10 +164,16 @@ export default function ScanResultPage() {
     }
   };
 
-  const getClassDistributionChartData = (classDistribution: ClassDistribution) => {
-    const labels = Object.keys(classDistribution).map((key) => getClassLabel(key));
+  const getClassDistributionChartData = (
+    classDistribution: ClassDistribution
+  ) => {
+    const labels = Object.keys(classDistribution).map((key) =>
+      getClassLabel(key)
+    );
     const data = Object.values(classDistribution);
-    const colors = Object.keys(classDistribution).map((key) => getClassColor(key));
+    const colors = Object.keys(classDistribution).map((key) =>
+      getClassColor(key)
+    );
 
     return {
       labels,
@@ -182,14 +190,50 @@ export default function ScanResultPage() {
   };
 
   const formatDate = (date: any) => {
-    const dateObj = date instanceof Date ? date : new Date(date);
-    return dateObj.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      let dateObj: Date;
+
+      // Handle Firestore Timestamp
+      if (date && typeof date.toDate === "function") {
+        dateObj = date.toDate();
+      }
+      // Handle Date object
+      else if (date instanceof Date) {
+        dateObj = date;
+      }
+      // Handle string date
+      else if (typeof date === "string") {
+        dateObj = new Date(date);
+      }
+      // Handle timestamp number
+      else if (typeof date === "number") {
+        dateObj = new Date(date);
+      }
+      // Handle Firestore Timestamp object structure
+      else if (date && date.seconds) {
+        dateObj = new Date(date.seconds * 1000);
+      } else {
+        console.warn("Unknown date format:", date);
+        return "Unknown Date";
+      }
+
+      // Check if the date is valid
+      if (isNaN(dateObj.getTime())) {
+        console.warn("Invalid date created from:", date);
+        return "Invalid Date";
+      }
+
+      return dateObj.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error, "Date value:", date);
+      return "Invalid Date";
+    }
   };
 
   // Show loading if user data is not loaded yet
@@ -209,7 +253,9 @@ export default function ScanResultPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading scan result...</p>
+          <p className="text-gray-600 dark:text-gray-300">
+            Loading scan result...
+          </p>
         </div>
       </div>
     );
@@ -361,7 +407,9 @@ export default function ScanResultPage() {
               </h3>
               <div className="h-64 md:h-80">
                 <Bar
-                  data={getClassDistributionChartData(results.class_distribution)}
+                  data={getClassDistributionChartData(
+                    results.class_distribution
+                  )}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
@@ -415,7 +463,11 @@ export default function ScanResultPage() {
                         {(count as number).toLocaleString()}
                       </div>
                       <div className="text-xs md:text-sm text-gray-500">
-                        {(((count as number) / results.total_records) * 100).toFixed(1)}%
+                        {(
+                          ((count as number) / results.total_records) *
+                          100
+                        ).toFixed(1)}
+                        %
                       </div>
                     </div>
                   </div>
@@ -519,9 +571,15 @@ export default function ScanResultPage() {
 
         {/* Risk Assessment */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8">
-          <h3 className="text-lg md:text-xl font-semibold mb-4">Risk Assessment</h3>
+          <h3 className="text-lg md:text-xl font-semibold mb-4">
+            Risk Assessment
+          </h3>
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-            <div className={`px-4 py-2 rounded-full text-sm font-medium w-fit ${getRiskLevelColor(riskLevel)}`}>
+            <div
+              className={`px-4 py-2 rounded-full text-sm font-medium w-fit ${getRiskLevelColor(
+                riskLevel
+              )}`}
+            >
               {riskLevel} Risk
             </div>
             <span className="text-gray-600 dark:text-gray-300 text-sm md:text-base">
@@ -530,8 +588,10 @@ export default function ScanResultPage() {
           </div>
           <div className="text-sm text-gray-500">
             <p>
-              This scan analyzed {results.total_records?.toLocaleString()} records and detected{" "}
-              {results.anomalies_detected?.toLocaleString()} anomalies ({results.anomaly_rate?.toFixed(2)}% of total traffic).
+              This scan analyzed {results.total_records?.toLocaleString()}{" "}
+              records and detected{" "}
+              {results.anomalies_detected?.toLocaleString()} anomalies (
+              {results.anomaly_rate?.toFixed(2)}% of total traffic).
             </p>
           </div>
         </div>
