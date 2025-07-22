@@ -90,44 +90,35 @@ export default function DetectPage() {
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error(
-          `Backend error: ${response.status} ${response.statusText}`
-        );
-      }
-
       const data = await response.json();
-
-      if (!data || typeof data.anomaly_rate === "undefined") {
-        throw new Error("Invalid response from backend");
-      }
+      console.log("🔍 Full API Response:", data);
+      console.log("🔍 Results object:", data.results);
+      console.log("🔍 Class distribution:", data.results?.class_distribution);
 
       setResults(data);
 
-      try {
-        const riskLevel = calculateRiskLevel(data.anomaly_rate);
-        await saveUserScan({
-          userId: user.id,
-          filename: file.name,
-          uploadDate: new Date(),
-          results: {
-            total_records: data.total_records || 0,
-            anomalies_detected: data.anomalies_detected || 0,
-            normal_records: data.normal_records || 0,
-            anomaly_rate: data.anomaly_rate || 0,
-            processing_time: data.processing_time || 0,
-            anomaly_scores_summary: data.results?.anomaly_scores_summary || {},
-            class_distribution: data.results?.class_distribution || {},
-            anomaly_scores: data.results?.anomaly_scores || [],
-          },
-          riskLevel,
-          status: "completed",
-        });
+      // Check what you're actually saving
+      const riskLevel = calculateRiskLevel(data.anomaly_rate || 0);
+      const saveData = {
+        userId: user.id,
+        filename: file.name,
+        uploadDate: new Date(),
+        results: {
+          anomaly_scores: data.results?.anomaly_scores || [],
+          total_records: data.total_records || 0,
+          anomalies_detected: data.anomalies_detected || 0,
+          normal_records: data.normal_records || 0,
+          anomaly_rate: data.anomaly_rate || 0,
+          processing_time: data.processing_time || 0,
+          anomaly_scores_summary: data.results?.anomaly_scores_summary || {},
+          class_distribution: data.results?.class_distribution || {},
+        },
+        riskLevel,
+        status: "completed" as const,
+      };
 
-        toast("Scan results saved successfully");
-      } catch (firestoreError) {
-        toast("Failed to save scan results");
-      }
+      console.log("🔍 Saving to Firestore:", saveData);
+      await saveUserScan(saveData);
     } catch (err) {
       toast("An error occurred during analysis");
       setError(
@@ -149,29 +140,29 @@ export default function DetectPage() {
   const getClassLabel = (classKey: string): string => {
     const labels: { [key: string]: string } = {
       class_0: "Normal Traffic",
-      class_1: "DDoS Attack",
-      class_2: "PortScan",
+      class_1: "DoS/DDoS Attack",
+      class_2: "Port Scan", 
       class_3: "Bot Attack",
-      class_4: "Infiltration",
+      class_4: "Infiltration",        // ✅ Already included
       class_5: "Web Attack",
       class_6: "Brute Force",
-      class_7: "SQL Injection",
-      class_8: "XSS Attack",
+      class_7: "Heartbleed",          // ✅ Added
+      class_8: "SQL Injection",       // ✅ Moved from class_7
     };
     return labels[classKey] || classKey;
   };
 
   const getClassColor = (classKey: string): string => {
     const colors: { [key: string]: string } = {
-      class_0: "#22c55e",
-      class_1: "#ef4444",
-      class_2: "#f97316",
-      class_3: "#eab308",
-      class_4: "#a855f7",
-      class_5: "#ec4899",
-      class_6: "#06b6d4",
-      class_7: "#8b5cf6",
-      class_8: "#f59e0b",
+      class_0: "#22c55e", // Green - Normal
+      class_1: "#ef4444", // Red - DoS/DDoS
+      class_2: "#f97316", // Orange - Port Scan
+      class_3: "#eab308", // Yellow - Bot
+      class_4: "#a855f7", // Purple - Infiltration
+      class_5: "#ec4899", // Pink - Web Attack
+      class_6: "#06b6d4", // Cyan - Brute Force
+      class_7: "#be123c", // Rose - Heartbleed (critical vulnerability)
+      class_8: "#8b5cf6", // Violet - SQL Injection
     };
     return colors[classKey] || "#6b7280";
   };
@@ -342,7 +333,7 @@ export default function DetectPage() {
               >
                 Browse Files
               </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-4">
                 Supported formats: CSV, PCAP
               </p>
             </div>
