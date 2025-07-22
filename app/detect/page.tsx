@@ -63,67 +63,86 @@ export default function DetectPage() {
   }, []);
 
   const handleUpload = async () => {
-    if (!isLoaded) {
-      setError("Please wait, loading user information...");
-      return;
-    }
-
-    if (!user) {
-      setError("You must be signed in to analyze files");
-      return;
-    }
-
-    if (!file) {
-      setError("Please select a file first");
-      return;
-    }
+    if (!file || !user) return;
 
     setIsUploading(true);
     setError(null);
+    setResults(null);
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
+      console.log("🔍 Frontend: Making request to /api/analyze");
+      
       const response = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
       });
 
+      console.log("🔍 Frontend: Response status:", response.status);
+
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status} ${response.statusText}`);
+      }
+
       const data = await response.json();
-      console.log("🔍 Full API Response:", data);
-      console.log("🔍 Results object:", data.results);
-      console.log("🔍 Class distribution:", data.results?.class_distribution);
+
+      // 🔍 DEBUG: Detailed logging
+      console.log("🔍 Frontend: Raw response from API:", data);
+      console.log("🔍 Frontend: data.results:", data.results);
+      console.log("🔍 Frontend: data.results?.class_distribution:", data.results?.class_distribution);
+      console.log("🔍 Frontend: Type of class_distribution:", typeof data.results?.class_distribution);
+      console.log("🔍 Frontend: Class distribution keys:", Object.keys(data.results?.class_distribution || {}));
+
+      if (!data || typeof data.anomaly_rate === "undefined") {
+        throw new Error("Invalid response from backend");
+      }
 
       setResults(data);
 
-      // Check what you're actually saving
-      const riskLevel = calculateRiskLevel(data.anomaly_rate || 0);
-      const saveData = {
-        userId: user.id,
-        filename: file.name,
-        uploadDate: new Date(),
-        results: {
-          anomaly_scores: data.results?.anomaly_scores || [],
-          total_records: data.total_records || 0,
-          anomalies_detected: data.anomalies_detected || 0,
-          normal_records: data.normal_records || 0,
-          anomaly_rate: data.anomaly_rate || 0,
-          processing_time: data.processing_time || 0,
-          anomaly_scores_summary: data.results?.anomaly_scores_summary || {},
-          class_distribution: data.results?.class_distribution || {},
-        },
-        riskLevel,
-        status: "completed" as const,
-      };
+      try {
+        const riskLevel = calculateRiskLevel(data.anomaly_rate);
+        
+        // 🔍 Explicit debugging before save
+        const classDistribution = data.results?.class_distribution || {};
+        console.log("🔍 Frontend: Class distribution before save:", classDistribution);
+        console.log("🔍 Frontend: Is class_distribution empty?", Object.keys(classDistribution).length === 0);
+        
+        const saveData = {
+          userId: user.id,
+          filename: file.name,
+          uploadDate: new Date(),
+          results: {
+            anomaly_scores: data.results?.anomaly_scores || [],
+            total_records: data.total_records || 0,
+            anomalies_detected: data.anomalies_detected || 0,
+            normal_records: data.normal_records || 0,
+            anomaly_rate: data.anomaly_rate || 0,
+            processing_time: data.processing_time || 0,
+            anomaly_scores_summary: data.results?.anomaly_scores_summary || {},
+            class_distribution: classDistribution,
+          },
+          riskLevel,
+          status: "completed" as const,
+        };
 
-      console.log("🔍 Saving to Firestore:", saveData);
-      await saveUserScan(saveData);
+        // 🔍 DEBUG: Log what we're saving
+        console.log("🔍 Frontend: Complete saveData object:", JSON.stringify(saveData, null, 2));
+        console.log("🔍 Frontend: saveData.results.class_distribution:", saveData.results.class_distribution);
+
+        const savedId = await saveUserScan(saveData);
+        console.log("🔍 Frontend: Saved with ID:", savedId);
+        
+        toast("Scan results saved successfully");
+      } catch (firestoreError) {
+        console.error("🔍 Frontend: Firestore error:", firestoreError);
+        toast("Failed to save scan results");
+      }
     } catch (err) {
+      console.error("🔍 Frontend: Upload error:", err);
       toast("An error occurred during analysis");
-      setError(
-        err instanceof Error ? err.message : "An error occurred during analysis"
-      );
+      setError(err instanceof Error ? err.message : "An error occurred during analysis");
     } finally {
       setIsUploading(false);
     }
@@ -140,14 +159,14 @@ export default function DetectPage() {
   const getClassLabel = (classKey: string): string => {
     const labels: { [key: string]: string } = {
       class_0: "Normal Traffic",
-      class_1: "DoS/DDoS Attack",
-      class_2: "Port Scan", 
-      class_3: "Bot Attack",
-      class_4: "Infiltration",        // ✅ Already included
-      class_5: "Web Attack",
-      class_6: "Brute Force",
-      class_7: "Heartbleed",          // ✅ Added
-      class_8: "SQL Injection",       // ✅ Moved from class_7
+      class_1: "DoS/DDoS Attack",      // 114,319 instances
+      class_2: "Port Scan",            // 1 instance
+      class_3: "Bot Attack",           // 52,833 instances
+      class_4: "Infiltration",         // 134,107 instances
+      class_5: "Web Attack",           // 34,268 instances
+      class_6: "Brute Force",          // 318,087 instances (highest!)
+      class_7: "Heartbleed",           // 45,100 instances
+      class_8: "SQL Injection",        // 0 instances (unused)
     };
     return labels[classKey] || classKey;
   };

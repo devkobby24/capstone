@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server';
-import { createReadStream } from 'fs';
-import { writeFile } from 'fs/promises';
+import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { createReadStream } from 'fs';
 
 export async function POST(request: NextRequest) {
-  let tempFilePath = '';
+  let tempFilePath: string | null = null;
   
   try {
     const formData = await request.formData();
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    console.log(`Processing file: ${file.name}, size: ${file.size} bytes`);
+    console.log(`🔍 API: Processing file: ${file.name}, size: ${file.size} bytes`);
 
     // Save file temporarily
     const bytes = await file.arrayBuffer();
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     tempFilePath = join(tmpdir(), `upload_${Date.now()}_${file.name}`);
     await writeFile(tempFilePath, buffer);
 
-    // Use dynamic import for node-fetch or http
+    // Dynamic import for node-fetch
     const { default: fetch } = await import('node-fetch');
     const FormData = (await import('form-data')).default;
     
@@ -33,23 +33,46 @@ export async function POST(request: NextRequest) {
       contentType: file.type,
     });
 
-    const response = await fetch('http://localhost:5000/analyze', {
+    console.log('🔍 API: Forwarding to Python service...');
+
+    // Forward to Python service
+    const pythonResponse = await fetch('http://localhost:5000/analyze', {
       method: 'POST',
       body: form,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Python service error: ${response.status} - ${errorText}`);
-      throw new Error(`Python service error: ${response.status} - ${errorText}`);
+    if (!pythonResponse.ok) {
+      throw new Error(`Python service error: ${pythonResponse.status}`);
     }
 
-    const data = await response.json();
-    console.log('Analysis completed successfully');
-    return Response.json(data);
+    const pythonResult = await pythonResponse.json() as any;
     
+    // 🔍 DEBUG: Log what we received from Python
+    console.log('🔍 API: Received from Python service:', pythonResult);
+    console.log('🔍 API: Class distribution received:', pythonResult.results?.class_distribution);
+
+    // 🚨 CRITICAL: Make sure we're forwarding ALL the data correctly
+    const responseData = {
+      total_records: pythonResult.total_records,
+      anomalies_detected: pythonResult.anomalies_detected,
+      normal_records: pythonResult.normal_records,
+      anomaly_rate: pythonResult.anomaly_rate,
+      processing_time: pythonResult.processing_time,
+      results: {
+        anomaly_scores_summary: pythonResult.results?.anomaly_scores_summary || {},
+        class_distribution: pythonResult.results?.class_distribution || {},
+        anomaly_scores: pythonResult.results?.anomaly_scores || [],
+      }
+    };
+
+    // 🔍 DEBUG: Log what we're sending back to frontend
+    console.log('🔍 API: Sending to frontend:', responseData);
+    console.log('🔍 API: Class distribution forwarded:', responseData.results.class_distribution);
+
+    return Response.json(responseData);
+
   } catch (error) {
-    console.error('Analysis error:', error);
+    console.error('🔍 API: Analysis error:', error);
     return Response.json(
       { error: error instanceof Error ? error.message : 'Analysis failed' },
       { status: 500 }
@@ -58,10 +81,9 @@ export async function POST(request: NextRequest) {
     // Clean up temp file
     if (tempFilePath) {
       try {
-        const { unlink } = await import('fs/promises');
         await unlink(tempFilePath);
-      } catch (e) {
-        console.warn('Failed to cleanup temp file:', e);
+      } catch (cleanupError) {
+        console.error('🔍 API: Failed to cleanup temp file:', cleanupError);
       }
     }
   }

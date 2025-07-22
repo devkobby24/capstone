@@ -8,7 +8,7 @@ export interface ScanResult {
   filename: string;
   uploadDate: Date | Timestamp;
   results: {
-    anomaly_scores: never[];
+    anomaly_scores?: number[];
     total_records: number;
     anomalies_detected: number;
     normal_records: number;
@@ -30,19 +30,47 @@ export interface ScanResult {
 
 export const saveUserScan = async (scanData: Omit<ScanResult, 'id'>) => {
   try {
-    console.log("🔍 Firestore saveUserScan received:", scanData); // Debug line
+    console.log("🔍 Firestore saveUserScan received:", scanData);
+    console.log("🔍 Firestore userId:", scanData.userId);
+    console.log("🔍 Firestore class_distribution:", scanData.results.class_distribution);
     
-    const docRef = await addDoc(collection(db, 'scans'), {
+    // Ensure userId is properly set
+    if (!scanData.userId) {
+      throw new Error("User ID is required for saving scan data");
+    }
+    
+    const docData = {
       ...scanData,
       uploadDate: scanData.uploadDate instanceof Date 
         ? Timestamp.fromDate(scanData.uploadDate)
-        : scanData.uploadDate
-    });
+        : scanData.uploadDate,
+      // Ensure userId is at the top level for security rules
+      userId: scanData.userId
+    };
     
-    console.log("🔍 Firestore document created with ID:", docRef.id); // Debug line
+    console.log("🔍 Final document to save:", JSON.stringify(docData, null, 2));
+    
+    const docRef = await addDoc(collection(db, 'user_scans'), docData);
+    
+    console.log("🔍 Firestore document created with ID:", docRef.id);
+    
+    // Verify what was actually saved
+    try {
+      const savedDoc = await getDoc(docRef);
+      const savedData = savedDoc.data();
+      console.log("🔍 Verified saved data:", savedData);
+      console.log("🔍 Verified class_distribution:", savedData?.results?.class_distribution);
+    } catch (verifyError) {
+      console.warn("🔍 Could not verify saved data:", verifyError);
+    }
+    
     return docRef.id;
   } catch (error) {
-    console.error("Error saving scan:", error);
+    console.error("🔍 Error saving scan:", error);
+    if (error instanceof Error) {
+      console.error("🔍 Error message:", error.message);
+      console.error("🔍 Error code:", (error as any).code);
+    }
     throw error;
   }
 };
@@ -52,25 +80,32 @@ export async function getScanById(scanId: string) {
     const scanDoc = await getDoc(doc(db, 'user_scans', scanId));
 
     if (!scanDoc.exists()) {
-      console.log('Scan document not found');
+      console.log('🔍 Scan document not found');
       return null;
     }
 
     const data = scanDoc.data();
-    console.log('Scan data loaded:', { id: scanDoc.id, userId: data.userId });
+    console.log('🔍 Scan data loaded:', { id: scanDoc.id, userId: data.userId });
+    console.log('🔍 Loaded class_distribution:', data.results?.class_distribution);
 
     return {
       id: scanDoc.id,
       ...data
     };
   } catch (error) {
-    console.error('Error getting scan by ID:', error);
+    console.error('🔍 Error getting scan by ID:', error);
     throw error;
   }
 }
 
 export const getUserScans = async (userId: string, limitCount: number = 10) => {
   try {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+    
+    console.log("🔍 Getting scans for userId:", userId);
+    
     const q = query(
       collection(db, 'user_scans'),
       where('userId', '==', userId),
@@ -79,19 +114,30 @@ export const getUserScans = async (userId: string, limitCount: number = 10) => {
     );
 
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const scans = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      uploadDate: doc.data().uploadDate.toDate ? doc.data().uploadDate.toDate() : doc.data().uploadDate,
+      uploadDate: doc.data().uploadDate?.toDate ? doc.data().uploadDate.toDate() : doc.data().uploadDate,
     })) as ScanResult[];
+    
+    console.log('🔍 getUserScans loaded scans:', scans.length);
+    scans.forEach((scan, index) => {
+      console.log(`🔍 Scan ${index} class_distribution:`, scan.results?.class_distribution);
+    });
+    
+    return scans;
   } catch (error) {
-    console.error('Error fetching user scans:', error);
+    console.error('🔍 Error fetching user scans:', error);
     throw error;
   }
 };
 
 export const getUserStats = async (userId: string) => {
   try {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+    
     const q = query(
       collection(db, 'user_scans'),
       where('userId', '==', userId)
@@ -104,7 +150,6 @@ export const getUserStats = async (userId: string) => {
     const totalAnomalies = scans.reduce((sum, scan) => sum + (scan.results?.anomalies_detected || 0), 0);
     const totalNormal = scans.reduce((sum, scan) => sum + (scan.results?.normal_records || 0), 0);
 
-    // Calculate risk level based on recent scans
     const recentScans = scans.slice(0, 5);
     const avgAnomalyRate = recentScans.length > 0
       ? recentScans.reduce((sum, scan) => sum + (scan.results?.anomaly_rate || 0), 0) / recentScans.length
@@ -121,7 +166,7 @@ export const getUserStats = async (userId: string) => {
       riskLevel,
     };
   } catch (error) {
-    console.error('Error fetching user stats:', error);
+    console.error('🔍 Error fetching user stats:', error);
     throw error;
   }
 };
