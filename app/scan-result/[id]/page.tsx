@@ -621,54 +621,9 @@ export default function ScanResultPage() {
           </div>
         </div>
 
-        {/* AI Analysis Section - New */}
-        {scan.aiAnalysis && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8">
-            <h3 className="text-lg md:text-xl font-semibold mb-4">
-              AI Analysis
-            </h3>
-            <div className="prose dark:prose-invert max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  // Customizing the rendering of specific elements
-                  h1: ({ children }) => (
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-4 mb-2">
-                      {children}
-                    </h2>
-                  ),
-                  h2: ({ children }) => (
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mt-3 mb-1">
-                      {children}
-                    </h3>
-                  ),
-                  h3: ({ children }) => (
-                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mt-2 mb-1">
-                      {children}
-                    </h4>
-                  ),
-                  p: ({ children }) => (
-                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-                      {children}
-                    </p>
-                  ),
-                  // Add more customizations as needed
-                }}
-              >
-                {scan.aiAnalysis.analysis}
-              </ReactMarkdown>
-            </div>
-            <div className="mt-4">
-              <span className="text-gray-500 dark:text-gray-400 text-sm">
-                Analyzed using AI on {formatDate(scan.aiAnalysis.generatedAt)}
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* AI Security Analysis */}
         {scan.aiAnalysis && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8">
+          <div className="bg-white mt-10 dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg md:text-xl font-semibold flex items-center gap-2">
                 🤖 AI Security Analysis

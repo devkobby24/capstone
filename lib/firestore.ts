@@ -89,7 +89,7 @@ export const saveUserScan = async (scanData: Omit<ScanResult, 'id'>) => {
 
 export async function getScanById(scanId: string) {
   try {
-    const scanDoc = await getDoc(doc(db, 'scans', scanId));
+    const scanDoc = await getDoc(doc(db, 'user_scans', scanId));
 
     if (!scanDoc.exists()) {
       console.log('🔍 Scan document not found');
