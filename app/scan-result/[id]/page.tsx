@@ -661,7 +661,7 @@ export default function ScanResultPage() {
                       </div>
                     ),
                     h3: ({ node, children, ...props }) => (
-                      <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 mb-3 border-l-4 border-blue-500">
+                      <div className="bg-blue-50 mt-8 dark:bg-blue-900/30 rounded-lg p-3 mb-3 border-l-4 border-blue-500">
                         <h3
                           className="text-base font-semibold text-blue-600 dark:text-blue-400 m-0 flex items-center gap-2"
                           {...props}
