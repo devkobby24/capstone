@@ -26,6 +26,11 @@ export interface ScanResult {
   };
   riskLevel: 'Low' | 'Medium' | 'High';
   status: 'completed' | 'processing' | 'failed';
+  aiAnalysis?: {
+    analysis: string;
+    prompt: string;
+    generatedAt: Date | Timestamp;
+  };
 }
 
 export const saveUserScan = async (scanData: Omit<ScanResult, 'id'>) => {
@@ -33,6 +38,7 @@ export const saveUserScan = async (scanData: Omit<ScanResult, 'id'>) => {
     console.log("🔍 Firestore saveUserScan received:", scanData);
     console.log("🔍 Firestore userId:", scanData.userId);
     console.log("🔍 Firestore class_distribution:", scanData.results.class_distribution);
+    console.log("🔍 AI Analysis included:", !!scanData.aiAnalysis);
     
     // Ensure userId is properly set
     if (!scanData.userId) {
@@ -45,7 +51,13 @@ export const saveUserScan = async (scanData: Omit<ScanResult, 'id'>) => {
         ? Timestamp.fromDate(scanData.uploadDate)
         : scanData.uploadDate,
       // Ensure userId is at the top level for security rules
-      userId: scanData.userId
+      userId: scanData.userId,
+      aiAnalysis: scanData.aiAnalysis ? {
+        ...scanData.aiAnalysis,
+        generatedAt: scanData.aiAnalysis.generatedAt instanceof Date
+          ? Timestamp.fromDate(scanData.aiAnalysis.generatedAt)
+          : scanData.aiAnalysis.generatedAt
+      } : undefined
     };
     
     console.log("🔍 Final document to save:", JSON.stringify(docData, null, 2));

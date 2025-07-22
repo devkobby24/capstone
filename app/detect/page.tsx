@@ -39,6 +39,8 @@ export default function DetectPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [results, setResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const { user, isLoaded } = useUser();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,13 +70,14 @@ export default function DetectPage() {
     setIsUploading(true);
     setError(null);
     setResults(null);
+    setAiAnalysis(null);
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
       console.log("🔍 Frontend: Making request to /api/analyze");
-      
+
       const response = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
@@ -83,66 +86,106 @@ export default function DetectPage() {
       console.log("🔍 Frontend: Response status:", response.status);
 
       if (!response.ok) {
-        throw new Error(`Backend error: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Backend error: ${response.status} ${response.statusText}`
+        );
       }
 
       const data = await response.json();
-
-      // 🔍 DEBUG: Detailed logging
-      console.log("🔍 Frontend: Raw response from API:", data);
-      console.log("🔍 Frontend: data.results:", data.results);
-      console.log("🔍 Frontend: data.results?.class_distribution:", data.results?.class_distribution);
-      console.log("🔍 Frontend: Type of class_distribution:", typeof data.results?.class_distribution);
-      console.log("🔍 Frontend: Class distribution keys:", Object.keys(data.results?.class_distribution || {}));
-
-      if (!data || typeof data.anomaly_rate === "undefined") {
-        throw new Error("Invalid response from backend");
-      }
-
       setResults(data);
 
+      // Generate AI analysis
+      setIsGeneratingAI(true);
       try {
-        const riskLevel = calculateRiskLevel(data.anomaly_rate);
-        
-        // 🔍 Explicit debugging before save
-        const classDistribution = data.results?.class_distribution || {};
-        console.log("🔍 Frontend: Class distribution before save:", classDistribution);
-        console.log("🔍 Frontend: Is class_distribution empty?", Object.keys(classDistribution).length === 0);
-        
-        const saveData = {
-          userId: user.id,
-          filename: file.name,
-          uploadDate: new Date(),
-          results: {
-            anomaly_scores: data.results?.anomaly_scores || [],
-            total_records: data.total_records || 0,
-            anomalies_detected: data.anomalies_detected || 0,
-            normal_records: data.normal_records || 0,
-            anomaly_rate: data.anomaly_rate || 0,
-            processing_time: data.processing_time || 0,
-            anomaly_scores_summary: data.results?.anomaly_scores_summary || {},
-            class_distribution: classDistribution,
+        console.log("🔍 Generating AI analysis...");
+
+        const aiResponse = await fetch("/api/ai-analysis", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          riskLevel,
-          status: "completed" as const,
-        };
+          body: JSON.stringify({ scanResults: data }),
+        });
 
-        // 🔍 DEBUG: Log what we're saving
-        console.log("🔍 Frontend: Complete saveData object:", JSON.stringify(saveData, null, 2));
-        console.log("🔍 Frontend: saveData.results.class_distribution:", saveData.results.class_distribution);
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          setAiAnalysis(aiData.analysis);
+          console.log("🔍 AI analysis generated successfully");
 
-        const savedId = await saveUserScan(saveData);
-        console.log("🔍 Frontend: Saved with ID:", savedId);
-        
-        toast("Scan results saved successfully");
-      } catch (firestoreError) {
-        console.error("🔍 Frontend: Firestore error:", firestoreError);
-        toast("Failed to save scan results");
+          // Save scan with AI analysis
+          try {
+            const riskLevel = calculateRiskLevel(data.anomaly_rate);
+
+            const saveData = {
+              userId: user.id,
+              filename: file.name,
+              uploadDate: new Date(),
+              results: {
+                anomaly_scores: data.results?.anomaly_scores || [],
+                total_records: data.total_records || 0,
+                anomalies_detected: data.anomalies_detected || 0,
+                normal_records: data.normal_records || 0,
+                anomaly_rate: data.anomaly_rate || 0,
+                processing_time: data.processing_time || 0,
+                anomaly_scores_summary:
+                  data.results?.anomaly_scores_summary || {},
+                class_distribution: data.results?.class_distribution || {},
+              },
+              riskLevel,
+              status: "completed" as const,
+              aiAnalysis: {
+                analysis: aiData.analysis,
+                prompt: aiData.prompt,
+                generatedAt: new Date(),
+              },
+            };
+
+            await saveUserScan(saveData);
+            toast("Scan results and AI analysis saved successfully");
+          } catch (firestoreError) {
+            console.error("🔍 Firestore error:", firestoreError);
+            toast("Scan completed but failed to save results");
+          }
+        } else {
+          console.error("🔍 AI analysis failed");
+          toast("Scan completed but AI analysis failed");
+
+          // Save scan without AI analysis
+          const riskLevel = calculateRiskLevel(data.anomaly_rate);
+          const saveData = {
+            userId: user.id,
+            filename: file.name,
+            uploadDate: new Date(),
+            results: {
+              anomaly_scores: data.results?.anomaly_scores || [],
+              total_records: data.total_records || 0,
+              anomalies_detected: data.anomalies_detected || 0,
+              normal_records: data.normal_records || 0,
+              anomaly_rate: data.anomaly_rate || 0,
+              processing_time: data.processing_time || 0,
+              anomaly_scores_summary:
+                data.results?.anomaly_scores_summary || {},
+              class_distribution: data.results?.class_distribution || {},
+            },
+            riskLevel,
+            status: "completed" as const,
+          };
+
+          await saveUserScan(saveData);
+          toast("Scan results saved successfully");
+        }
+      } catch (aiError) {
+        console.error("🔍 AI generation error:", aiError);
+        toast("Scan completed but AI analysis failed");
+      } finally {
+        setIsGeneratingAI(false);
       }
     } catch (err) {
       console.error("🔍 Frontend: Upload error:", err);
       toast("An error occurred during analysis");
-      setError(err instanceof Error ? err.message : "An error occurred during analysis");
+      setError(
+        err instanceof Error ? err.message : "An error occurred during analysis"
+      );
     } finally {
       setIsUploading(false);
     }
@@ -159,14 +202,14 @@ export default function DetectPage() {
   const getClassLabel = (classKey: string): string => {
     const labels: { [key: string]: string } = {
       class_0: "Normal Traffic",
-      class_1: "DoS/DDoS Attack",      // 114,319 instances
-      class_2: "Port Scan",            // 1 instance
-      class_3: "Bot Attack",           // 52,833 instances
-      class_4: "Infiltration",         // 134,107 instances
-      class_5: "Web Attack",           // 34,268 instances
-      class_6: "Brute Force",          // 318,087 instances (highest!)
-      class_7: "Heartbleed",           // 45,100 instances
-      class_8: "SQL Injection",        // 0 instances (unused)
+      class_1: "DoS/DDoS Attack", // 114,319 instances
+      class_2: "Port Scan", // 1 instance
+      class_3: "Bot Attack", // 52,833 instances
+      class_4: "Infiltration", // 134,107 instances
+      class_5: "Web Attack", // 34,268 instances
+      class_6: "Brute Force", // 318,087 instances (highest!)
+      class_7: "Heartbleed", // 45,100 instances
+      class_8: "SQL Injection", // 0 instances (unused)
     };
     return labels[classKey] || classKey;
   };
@@ -377,7 +420,8 @@ export default function DetectPage() {
                     large datasets.
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-500">
-                    File: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    File: {file.name} ({(file.size / 1024 / 1024).toFixed(2)}{" "}
+                    MB)
                   </p>
                 </div>
               )}
@@ -547,8 +591,78 @@ export default function DetectPage() {
 
               {results.processing_time && (
                 <p className="text-sm text-gray-500">
-                  Analysis completed in {results.processing_time.toFixed(2)} seconds
+                  Analysis completed in {results.processing_time.toFixed(2)}{" "}
+                  seconds
                 </p>
+              )}
+            </div>
+
+            {/* AI Security Analysis */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg md:text-xl font-semibold flex items-center gap-2">
+                  🤖 AI Security Analysis
+                </h3>
+                {isGeneratingAI && (
+                  <div className="flex items-center gap-2 text-blue-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span className="text-sm">Generating...</span>
+                  </div>
+                )}
+              </div>
+
+              {isGeneratingAI ? (
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-blue-200 dark:bg-blue-700 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-blue-200 dark:bg-blue-700 rounded w-1/2 mb-2"></div>
+                    <div className="h-4 bg-blue-200 dark:bg-blue-700 rounded w-5/6"></div>
+                  </div>
+                  <p className="text-blue-700 dark:text-blue-300 text-sm mt-2">
+                    AI is analyzing your scan results and generating security
+                    recommendations...
+                  </p>
+                </div>
+              ) : aiAnalysis ? (
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <div className="prose dark:prose-invert max-w-none">
+                    <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-sans">
+                      {aiAnalysis}
+                    </pre>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => navigator.clipboard.writeText(aiAnalysis)}
+                      className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors"
+                    >
+                      Copy Analysis
+                    </button>
+                    <button
+                      onClick={() => {
+                        const element = document.createElement("a");
+                        const file = new Blob([aiAnalysis], {
+                          type: "text/plain",
+                        });
+                        element.href = URL.createObjectURL(file);
+                        const timestamp = new Date()
+                          .toISOString()
+                          .replace(/[:.]/g, "-");
+                        element.download = `security-analysis-${timestamp}.txt`;
+                        element.click();
+                      }}
+                      className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition-colors"
+                    >
+                      Download Report
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                  <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+                    AI analysis failed to generate. You can still review the
+                    scan results above.
+                  </p>
+                </div>
               )}
             </div>
           </div>
