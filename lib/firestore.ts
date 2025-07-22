@@ -30,53 +30,19 @@ export interface ScanResult {
 
 export const saveUserScan = async (scanData: Omit<ScanResult, 'id'>) => {
   try {
-    // Helper function to safely calculate min/max for large arrays
-    const calculateStats = (scores: number[]) => {
-      if (!scores || scores.length === 0) {
-        return { count: 0, min: 0, max: 0, avg: 0 };
-      }
-
-      let min = scores[0];
-      let max = scores[0];
-      let sum = 0;
-
-      for (let i = 0; i < scores.length; i++) {
-        const score = scores[i];
-        if (score < min) min = score;
-        if (score > max) max = score;
-        sum += score;
-      }
-
-      return {
-        count: scores.length,
-        min: min,
-        max: max,
-        avg: sum / scores.length,
-      };
-    };
-
-    // Create a smaller version of the data for storage
-    const compactData = {
+    console.log("🔍 Firestore saveUserScan received:", scanData); // Debug line
+    
+    const docRef = await addDoc(collection(db, 'scans'), {
       ...scanData,
-      results: {
-        total_records: scanData.results.total_records,
-        anomalies_detected: scanData.results.anomalies_detected,
-        normal_records: scanData.results.normal_records,
-        anomaly_rate: scanData.results.anomaly_rate,
-        // Use safe calculation for large arrays
-        anomaly_scores_summary: calculateStats(scanData.results.anomaly_scores || []),
-        processing_time: scanData.results.processing_time,
-      },
-      uploadDate: new Date(),
-    };
-
-    console.log("Attempting to save compact scan data:", compactData);
-
-    const docRef = await addDoc(collection(db, 'user_scans'), compactData);
-    console.log("Document written with ID: ", docRef.id);
+      uploadDate: scanData.uploadDate instanceof Date 
+        ? Timestamp.fromDate(scanData.uploadDate)
+        : scanData.uploadDate
+    });
+    
+    console.log("🔍 Firestore document created with ID:", docRef.id); // Debug line
     return docRef.id;
   } catch (error) {
-    console.error('Error saving scan:', error);
+    console.error("Error saving scan:", error);
     throw error;
   }
 };

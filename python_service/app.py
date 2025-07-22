@@ -73,6 +73,11 @@ def load_model():
             print(f"Model input shape: {model.input_shape}")
             print(f"Model output shape: {model.output_shape}")
             
+            # ✅ Add this to check number of classes
+            if hasattr(model, 'output_shape'):
+                output_classes = model.output_shape[-1]
+                print(f"🔍 Model predicts {output_classes} classes")
+            
         except Exception as e:
             print(f"Error loading model: {e}")
             raise e
@@ -106,21 +111,30 @@ def analyze():
         print(f"Predictions shape: {predictions.shape}")
         
         # Process results for multi-class classification
-        # Get the class with highest probability for each sample
         predicted_classes = np.argmax(predictions, axis=1)
         
-        # Assuming class 0 is 'normal' and classes 1-6 are different types of anomalies
+        # Debug: Check what classes are being predicted
+        print(f"🔍 Unique predicted classes: {np.unique(predicted_classes)}")
+        print(f"🔍 Predictions sample (first 10): {predicted_classes[:10]}")
+        
+        # Assuming class 0 is 'normal' and classes 1-8 are different types of anomalies
         normal_class = 0
         anomalies = predicted_classes != normal_class
         
         # Get anomaly scores (max probability for non-normal classes)
-        anomaly_scores = 1 - predictions[:, normal_class]  # 1 - probability of normal class
+        anomaly_scores = 1 - predictions[:, normal_class]
         
         anomalies_detected = int(np.sum(anomalies))
         normal_records = total_records - anomalies_detected
         anomaly_rate = float(np.mean(anomalies) * 100)
         
-        # In your Python service, update the results structure
+        # Generate class distribution for 9 classes (0-8)
+        class_counts = {}
+        for i in range(9):  # Classes 0-8
+            count = int(np.sum(predicted_classes == i))
+            class_counts[f'class_{i}'] = count
+            print(f"🔍 Class {i}: {count} instances")
+        
         results = {
             'total_records': total_records,
             'anomalies_detected': int(anomalies_detected),
@@ -129,18 +143,19 @@ def analyze():
             'processing_time': time.time() - start_time,
             'results': {
                 'anomaly_scores_summary': {
-                    'min': float(np.min(anomaly_scores)),
-                    'max': float(np.max(anomaly_scores)),
-                    'avg': float(np.mean(anomaly_scores))
+                    'count': len(anomaly_scores),
+                    'min': float(np.min(anomaly_scores)) if len(anomaly_scores) > 0 else 0.0,
+                    'max': float(np.max(anomaly_scores)) if len(anomaly_scores) > 0 else 0.0,
+                    'avg': float(np.mean(anomaly_scores)) if len(anomaly_scores) > 0 else 0.0
                 },
-                'class_distribution': {
-                    f'class_{i}': int(np.sum(predicted_classes == i)) 
-                    for i in range(7)
-                }
+                'class_distribution': class_counts
             }
         }
         
-        print(f"Analysis completed in {time.time() - start_time:.2f} seconds")
+        # Debug: Print what you're returning
+        print("🔍 Python service returning:", results)
+        print("🔍 Class distribution:", results['results']['class_distribution'])
+        
         return jsonify(results)
         
     except Exception as e:
