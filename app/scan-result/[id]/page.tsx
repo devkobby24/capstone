@@ -20,6 +20,8 @@ import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import Link from "next/link";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 ChartJS.register(
   CategoryScale,
@@ -56,6 +58,12 @@ interface ScanData {
       count: number;
     };
     class_distribution?: ClassDistribution;
+  };
+  // ✅ Add AI analysis field
+  aiAnalysis?: {
+    analysis: string;
+    prompt: string;
+    generatedAt: any;
   };
 }
 
@@ -612,6 +620,276 @@ export default function ScanResultPage() {
             </Link>
           </div>
         </div>
+
+        {/* AI Analysis Section - New */}
+        {scan.aiAnalysis && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8">
+            <h3 className="text-lg md:text-xl font-semibold mb-4">
+              AI Analysis
+            </h3>
+            <div className="prose dark:prose-invert max-w-none">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Customizing the rendering of specific elements
+                  h1: ({ children }) => (
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-4 mb-2">
+                      {children}
+                    </h2>
+                  ),
+                  h2: ({ children }) => (
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mt-3 mb-1">
+                      {children}
+                    </h3>
+                  ),
+                  h3: ({ children }) => (
+                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mt-2 mb-1">
+                      {children}
+                    </h4>
+                  ),
+                  p: ({ children }) => (
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+                      {children}
+                    </p>
+                  ),
+                  // Add more customizations as needed
+                }}
+              >
+                {scan.aiAnalysis.analysis}
+              </ReactMarkdown>
+            </div>
+            <div className="mt-4">
+              <span className="text-gray-500 dark:text-gray-400 text-sm">
+                Analyzed using AI on {formatDate(scan.aiAnalysis.generatedAt)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* AI Security Analysis */}
+        {scan.aiAnalysis && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg md:text-xl font-semibold flex items-center gap-2">
+                🤖 AI Security Analysis
+              </h3>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Generated: {formatDate(scan.aiAnalysis.generatedAt)}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <div
+                className="prose prose-sm dark:prose-invert max-w-none 
+                          prose-headings:text-gray-900 dark:prose-headings:text-white
+                          prose-h1:text-xl prose-h2:text-lg prose-h3:text-base
+                          prose-strong:text-gray-900 dark:prose-strong:text-white
+                          prose-ul:text-gray-700 dark:prose-ul:text-gray-300
+                          prose-li:text-gray-700 dark:prose-li:text-gray-300
+                          prose-p:text-gray-700 dark:prose-p:text-gray-300
+                          prose-code:bg-gray-200 dark:prose-code:bg-gray-600 
+                          prose-code:text-red-600 dark:prose-code:text-red-400
+                          prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
+              >
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h2: ({ node, children, ...props }) => (
+                      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border-l-4 border-red-500 shadow-sm">
+                        <h2
+                          className="text-lg font-bold text-red-600 dark:text-red-400 m-0 flex items-center gap-2"
+                          {...props}
+                        >
+                          <span className="text-red-500">🚨</span>
+                          {children}
+                        </h2>
+                      </div>
+                    ),
+                    h3: ({ node, children, ...props }) => (
+                      <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 mb-3 border-l-4 border-blue-500">
+                        <h3
+                          className="text-base font-semibold text-blue-600 dark:text-blue-400 m-0 flex items-center gap-2"
+                          {...props}
+                        >
+                          <span className="text-blue-500">🔧</span>
+                          {children}
+                        </h3>
+                      </div>
+                    ),
+                    ul: ({ node, ...props }) => (
+                      <ul className="space-y-2 ml-4" {...props} />
+                    ),
+                    li: ({ node, children, ...props }) => (
+                      <li
+                        className="flex items-start gap-2 text-gray-700 dark:text-gray-300"
+                        {...props}
+                      >
+                        <span className="text-green-500 mt-1">•</span>
+                        <span>{children}</span>
+                      </li>
+                    ),
+                    strong: ({ node, children, ...props }) => (
+                      <strong
+                        className="bg-yellow-100 dark:bg-yellow-900/30 px-1 py-0.5 rounded font-bold text-gray-900 dark:text-white"
+                        {...props}
+                      >
+                        {children}
+                      </strong>
+                    ),
+                    p: ({ node, ...props }) => (
+                      <p
+                        className="mb-3 text-gray-700 dark:text-gray-300 leading-relaxed"
+                        {...props}
+                      />
+                    ),
+                    code: ({ node, ...props }) => {
+                      const isInline =
+                        node?.position?.start.line === node?.position?.end.line;
+                      return isInline ? (
+                        <code
+                          className="bg-gray-200 dark:bg-gray-600 text-red-600 dark:text-red-400 px-1 py-0.5 rounded text-sm"
+                          {...props}
+                        />
+                      ) : (
+                        <code
+                          className="block bg-gray-800 text-green-400 p-3 rounded-lg text-sm overflow-x-auto"
+                          {...props}
+                        />
+                      );
+                    },
+                    blockquote: ({ node, ...props }) => (
+                      <blockquote
+                        className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 mb-4"
+                        {...props}
+                      />
+                    ),
+                  }}
+                >
+                  {scan.aiAnalysis.analysis}
+                </ReactMarkdown>
+              </div>
+
+              {/* Action buttons */}
+              <div className="mt-6 flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(scan.aiAnalysis!.analysis);
+                    toast("Analysis copied to clipboard!");
+                  }}
+                  className="flex items-center gap-2 text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg transition-all transform hover:scale-105 shadow-md"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Copy Analysis
+                </button>
+
+                <button
+                  onClick={() => {
+                    const element = document.createElement("a");
+                    const file = new Blob([scan.aiAnalysis!.analysis], {
+                      type: "text/plain",
+                    });
+                    element.href = URL.createObjectURL(file);
+                    const timestamp = new Date()
+                      .toISOString()
+                      .replace(/[:.]/g, "-");
+                    element.download = `security-analysis-${scan.filename}-${timestamp}.txt`;
+                    element.click();
+                    toast("Analysis downloaded!");
+                  }}
+                  className="flex items-center gap-2 text-sm bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-2 rounded-lg transition-all transform hover:scale-105 shadow-md"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Download Report
+                </button>
+
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-2 text-sm bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-4 py-2 rounded-lg transition-all transform hover:scale-105 shadow-md"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                    />
+                  </svg>
+                  Print Report
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show message if no AI analysis available */}
+        {!scan.aiAnalysis && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg md:text-xl font-semibold flex items-center gap-2">
+                🤖 AI Security Analysis
+              </h3>
+            </div>
+
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-5 h-5 text-yellow-600 dark:text-yellow-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+                  AI security analysis is not available for this scan. This
+                  feature was added after this scan was completed. Run a new
+                  scan to get AI-powered security recommendations.
+                </p>
+              </div>
+              <div className="mt-3">
+                <Link href="/detect">
+                  <button className="text-sm bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    Run New Scan with AI Analysis
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />

@@ -18,6 +18,8 @@ import { Bar, Line } from "react-chartjs-2";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 ChartJS.register(
   CategoryScale,
@@ -624,17 +626,118 @@ export default function DetectPage() {
                   </p>
                 </div>
               ) : aiAnalysis ? (
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <div className="prose dark:prose-invert max-w-none">
-                    <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-sans">
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                  {/* ✅ Replace the <pre> tag with ReactMarkdown */}
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none 
+                    prose-headings:text-gray-900 dark:prose-headings:text-white
+                    prose-h1:text-xl prose-h2:text-lg prose-h3:text-base
+                    prose-strong:text-gray-900 dark:prose-strong:text-white
+                    prose-ul:text-gray-700 dark:prose-ul:text-gray-300
+                    prose-li:text-gray-700 dark:prose-li:text-gray-300
+                    prose-p:text-gray-700 dark:prose-p:text-gray-300
+                    prose-code:bg-gray-200 dark:prose-code:bg-gray-600 
+                    prose-code:text-red-600 dark:prose-code:text-red-400
+                    prose-code:px-1 prose-code:py-0.5 prose-code:rounded"
+                  >
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        // Custom styling for different elements
+                        h1: ({ node, ...props }) => (
+                          <h1
+                            className="text-xl font-bold mb-3 text-red-600 dark:text-red-400"
+                            {...props}
+                          />
+                        ),
+                        h2: ({ node, ...props }) => (
+                          <h2
+                            className="text-lg font-semibold mb-2 text-blue-600 dark:text-blue-400"
+                            {...props}
+                          />
+                        ),
+                        h3: ({ node, ...props }) => (
+                          <h3
+                            className="text-base font-medium mb-2 text-green-600 dark:text-green-400"
+                            {...props}
+                          />
+                        ),
+                        strong: ({ node, ...props }) => (
+                          <strong
+                            className="font-bold text-gray-900 dark:text-white"
+                            {...props}
+                          />
+                        ),
+                        ul: ({ node, ...props }) => (
+                          <ul
+                            className="list-disc pl-6 mb-4 space-y-1"
+                            {...props}
+                          />
+                        ),
+                        ol: ({ node, ...props }) => (
+                          <ol
+                            className="list-decimal pl-6 mb-4 space-y-1"
+                            {...props}
+                          />
+                        ),
+                        li: ({ node, ...props }) => (
+                          <li
+                            className="text-gray-700 dark:text-gray-300 leading-relaxed"
+                            {...props}
+                          />
+                        ),
+                        p: ({ node, ...props }) => (
+                          <p
+                            className="mb-3 text-gray-700 dark:text-gray-300 leading-relaxed"
+                            {...props}
+                          />
+                        ),
+                        code: ({ node, ...props }) => {
+                          const isInline =
+                            node?.position?.start.line ===
+                            node?.position?.end.line;
+                          return isInline ? (
+                            <code
+                              className="bg-gray-200 dark:bg-gray-600 text-red-600 dark:text-red-400 px-1 py-0.5 rounded text-sm"
+                              {...props}
+                            />
+                          ) : (
+                            <code
+                              className="block bg-gray-800 text-green-400 p-3 rounded-lg text-sm overflow-x-auto"
+                              {...props}
+                            />
+                          );
+                        },
+                        blockquote: ({ node, ...props }) => (
+                          <blockquote
+                            className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 mb-4"
+                            {...props}
+                          />
+                        ),
+                      }}
+                    >
                       {aiAnalysis}
-                    </pre>
+                    </ReactMarkdown>
                   </div>
-                  <div className="mt-4 flex gap-2">
+
+                  <div className="mt-6 flex flex-wrap gap-2">
                     <button
                       onClick={() => navigator.clipboard.writeText(aiAnalysis)}
-                      className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors"
+                      className="flex items-center gap-2 text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
                     >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
                       Copy Analysis
                     </button>
                     <button
@@ -650,18 +753,65 @@ export default function DetectPage() {
                         element.download = `security-analysis-${timestamp}.txt`;
                         element.click();
                       }}
-                      className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition-colors"
+                      className="flex items-center gap-2 text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
                     >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
                       Download Report
+                    </button>
+                    <button
+                      onClick={() => window.print()}
+                      className="flex items-center gap-2 text-sm bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                        />
+                      </svg>
+                      Print Report
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
-                  <p className="text-yellow-700 dark:text-yellow-300 text-sm">
-                    AI analysis failed to generate. You can still review the
-                    scan results above.
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-yellow-600 dark:text-yellow-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 19c-.77.833.192 2.5 1.732 2.5z"
+                      />
+                    </svg>
+                    <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+                      AI analysis failed to generate. You can still review the
+                      scan results above.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

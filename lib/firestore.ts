@@ -89,7 +89,7 @@ export const saveUserScan = async (scanData: Omit<ScanResult, 'id'>) => {
 
 export async function getScanById(scanId: string) {
   try {
-    const scanDoc = await getDoc(doc(db, 'user_scans', scanId));
+    const scanDoc = await getDoc(doc(db, 'scans', scanId));
 
     if (!scanDoc.exists()) {
       console.log('🔍 Scan document not found');
@@ -98,11 +98,29 @@ export async function getScanById(scanId: string) {
 
     const data = scanDoc.data();
     console.log('🔍 Scan data loaded:', { id: scanDoc.id, userId: data.userId });
-    console.log('🔍 Loaded class_distribution:', data.results?.class_distribution);
+    console.log('🔍 Raw uploadDate from Firestore:', data.uploadDate);
+    console.log('🔍 AI Analysis available:', !!data.aiAnalysis);
+
+    // Handle the uploadDate properly
+    let uploadDate = data.uploadDate;
+    if (uploadDate && typeof uploadDate.toDate === 'function') {
+      uploadDate = uploadDate.toDate();
+    }
+
+    // Handle AI analysis date if it exists
+    let aiAnalysis = data.aiAnalysis;
+    if (aiAnalysis && aiAnalysis.generatedAt && typeof aiAnalysis.generatedAt.toDate === 'function') {
+      aiAnalysis = {
+        ...aiAnalysis,
+        generatedAt: aiAnalysis.generatedAt.toDate()
+      };
+    }
 
     return {
       id: scanDoc.id,
-      ...data
+      ...data,
+      uploadDate: uploadDate,
+      aiAnalysis: aiAnalysis
     };
   } catch (error) {
     console.error('🔍 Error getting scan by ID:', error);
