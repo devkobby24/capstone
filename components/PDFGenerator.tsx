@@ -70,33 +70,6 @@ export default function PDFGenerator({
         return false;
       };
 
-      // Helper function to add formatted text with wrapping
-      const addFormattedText = (
-        text: string,
-        x: number,
-        fontSize: number,
-        color: [number, number, number],
-        maxWidth: number,
-        isBold: boolean = false
-      ) => {
-        pdf.setFontSize(fontSize);
-        pdf.setTextColor(color[0], color[1], color[2]);
-        if (isBold) {
-          pdf.setFont("helvetica", "bold");
-        } else {
-          pdf.setFont("helvetica", "normal");
-        }
-
-        const lines = pdf.splitTextToSize(text, maxWidth);
-        lines.forEach((line: string) => {
-          checkNewPage();
-          pdf.text(line, x, yPosition);
-          yPosition += fontSize * 0.4 + 2;
-        });
-
-        return yPosition;
-      };
-
       // Title
       pdf.setFontSize(20);
       pdf.setTextColor(30, 64, 175);
@@ -216,26 +189,55 @@ export default function PDFGenerator({
 
       yPosition += 30;
 
-      // Capture Charts
-      checkNewPage(70);
+      // ✅ SIMPLIFIED: Direct chart capture method
+      const captureChartDirectly = async (canvas: HTMLCanvasElement) => {
+        try {
+          // Get the chart data directly from the canvas
+          return canvas.toDataURL("image/png");
+        } catch (error) {
+          console.error("Direct canvas capture failed:", error);
+          return null;
+        }
+      };
+
+      // Alternative: Capture chart container with minimal processing
+      const captureChartContainer = async (canvas: HTMLCanvasElement) => {
+        try {
+          // Find the parent container
+          const chartContainer = canvas.closest('.bg-white, [class*="bg-white"]') as HTMLElement;
+          if (!chartContainer) return null;
+
+          // Simple capture with minimal options
+          const capturedCanvas = await html2canvas(chartContainer, {
+            scale: 1,
+            backgroundColor: "#ffffff",
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            // Simplified options to avoid color parsing issues
+          });
+
+          return capturedCanvas.toDataURL("image/png");
+        } catch (error) {
+          console.error("Container capture failed:", error);
+          return null;
+        }
+      };
+
+      // Capture Charts with fallback methods
       const charts = document.querySelectorAll("canvas");
 
       if (charts.length > 0) {
-        // Traffic Distribution Chart
-        try {
-          const chartContainer = charts[0].closest(
-            ".bg-white, .dark\\:bg-gray-800"
-          ) as HTMLElement;
-          if (chartContainer) {
-            const canvas = await html2canvas(chartContainer, {
-              scale: 1.5,
-              backgroundColor: "#ffffff",
-              width: 600,
-              height: 400,
-            });
+        checkNewPage(70);
+        
+        // Try to capture first chart
+        let chartImg = await captureChartDirectly(charts[0]);
+        if (!chartImg) {
+          chartImg = await captureChartContainer(charts[0]);
+        }
 
-            const chartImg = canvas.toDataURL("image/png");
-
+        if (chartImg) {
+          try {
             pdf.setFontSize(12);
             pdf.setTextColor(30, 64, 175);
             pdf.setFont("helvetica", "bold");
@@ -246,29 +248,54 @@ export default function PDFGenerator({
             const chartHeight = 65;
             pdf.addImage(chartImg, "PNG", 15, yPosition, chartWidth, chartHeight);
             yPosition += chartHeight + 15;
+          } catch (error) {
+            console.error("Failed to add chart to PDF:", error);
+            // Add fallback text
+            pdf.setFontSize(10);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text("Chart display failed - data available in tables below", 15, yPosition);
+            yPosition += 10;
           }
-        } catch (error) {
-          console.error("Failed to capture traffic distribution chart:", error);
+        } else {
+          // Create data table instead of chart
+          pdf.setFontSize(12);
+          pdf.setTextColor(30, 64, 175);
+          pdf.setFont("helvetica", "bold");
+          pdf.text("Traffic Distribution Analysis (Data Table)", 15, yPosition);
+          yPosition += 10;
+
+          // Add basic traffic data
+          if (scanData.results.class_distribution) {
+            const entries = Object.entries(scanData.results.class_distribution)
+              .sort(([, a], [, b]) => (b as number) - (a as number))
+              .slice(0, 5);
+
+            entries.forEach(([classKey, count]) => {
+              checkNewPage(6);
+              pdf.setFontSize(9);
+              pdf.setTextColor(0, 0, 0);
+              pdf.setFont("helvetica", "normal");
+              const percentage = (((count as number) / scanData.results.total_records) * 100).toFixed(1);
+              pdf.text(`${getClassLabel(classKey)}: ${(count as number).toLocaleString()} (${percentage}%)`, 20, yPosition);
+              yPosition += 6;
+            });
+          }
+          yPosition += 10;
         }
       }
 
       // Second chart if available
       if (charts.length > 1) {
         checkNewPage(70);
-        try {
-          const chartContainer = charts[1].closest(
-            ".bg-white, .dark\\:bg-gray-800"
-          ) as HTMLElement;
-          if (chartContainer) {
-            const canvas = await html2canvas(chartContainer, {
-              scale: 1.5,
-              backgroundColor: "#ffffff",
-              width: 600,
-              height: 400,
-            });
+        
+        // Try to capture second chart
+        let chartImg = await captureChartDirectly(charts[1]);
+        if (!chartImg) {
+          chartImg = await captureChartContainer(charts[1]);
+        }
 
-            const chartImg = canvas.toDataURL("image/png");
-
+        if (chartImg) {
+          try {
             pdf.setFontSize(12);
             pdf.setTextColor(30, 64, 175);
             pdf.setFont("helvetica", "bold");
@@ -279,9 +306,47 @@ export default function PDFGenerator({
             const chartHeight = 65;
             pdf.addImage(chartImg, "PNG", 15, yPosition, chartWidth, chartHeight);
             yPosition += chartHeight + 15;
+          } catch (error) {
+            console.error("Failed to add second chart to PDF:", error);
+            // Add fallback text
+            pdf.setFontSize(10);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text("Chart display failed - data available in tables below", 15, yPosition);
+            yPosition += 10;
           }
-        } catch (error) {
-          console.error("Failed to capture anomaly types chart:", error);
+        } else {
+          // Create data table for anomaly types
+          pdf.setFontSize(12);
+          pdf.setTextColor(30, 64, 175);
+          pdf.setFont("helvetica", "bold");
+          pdf.text("Anomaly Types Distribution (Data Table)", 15, yPosition);
+          yPosition += 10;
+
+          // Add anomaly data (exclude normal traffic)
+          if (scanData.results.class_distribution) {
+            const anomalies = Object.entries(scanData.results.class_distribution)
+              .filter(([key, count]) => key !== 'class_0' && (count as number) > 0)
+              .sort(([, a], [, b]) => (b as number) - (a as number))
+              .slice(0, 5);
+
+            if (anomalies.length > 0) {
+              anomalies.forEach(([classKey, count]) => {
+                checkNewPage(6);
+                pdf.setFontSize(9);
+                pdf.setTextColor(0, 0, 0);
+                pdf.setFont("helvetica", "normal");
+                const percentage = (((count as number) / scanData.results.anomalies_detected) * 100).toFixed(1);
+                pdf.text(`${getClassLabel(classKey)}: ${(count as number).toLocaleString()} (${percentage}% of threats)`, 20, yPosition);
+                yPosition += 6;
+              });
+            } else {
+              pdf.setFontSize(9);
+              pdf.setTextColor(100, 100, 100);
+              pdf.text("No anomaly types detected", 20, yPosition);
+              yPosition += 6;
+            }
+          }
+          yPosition += 10;
         }
       }
 
@@ -296,7 +361,7 @@ export default function PDFGenerator({
 
         const tableData = Object.entries(scanData.results.class_distribution)
           .sort(([, a], [, b]) => (b as number) - (a as number))
-          .slice(0, 10); // Limit to top 10
+          .slice(0, 10);
 
         const headers = ["Attack Type", "Count", "Percentage", "Category"];
         const colWidths = [70, 30, 25, 25];
@@ -349,16 +414,16 @@ export default function PDFGenerator({
         yPosition += 10;
       }
 
-      // ✅ ENHANCED AI ANALYSIS SECTION
+      // ✅ ENHANCED AI ANALYSIS SECTION - FIXED EMOJI ENCODING
       if (scanData.aiAnalysis?.analysis) {
         pdf.addPage();
         yPosition = 20;
 
-        // AI Analysis Header
+        // AI Analysis Header (remove emojis that cause encoding issues)
         pdf.setFontSize(16);
         pdf.setTextColor(5, 150, 105);
         pdf.setFont("helvetica", "bold");
-        pdf.text("🤖 AI Security Analysis & Recommendations", 15, yPosition);
+        pdf.text("AI Security Analysis & Recommendations", 15, yPosition);
         yPosition += 15;
 
         // Parse and format the AI analysis
@@ -375,7 +440,7 @@ export default function PDFGenerator({
 
           checkNewPage();
 
-          // Main headers (##)
+          // Main headers (##) - Remove emojis
           if (trimmedLine.startsWith("##")) {
             yPosition += 5;
             checkNewPage(15);
@@ -390,11 +455,13 @@ export default function PDFGenerator({
             pdf.setFontSize(12);
             pdf.setTextColor(220, 38, 38);
             pdf.setFont("helvetica", "bold");
-            pdf.text(`🚨 ${headerText}`, 18, yPosition + 6);
+            // Remove emojis and special characters that cause encoding issues
+            const cleanHeaderText = headerText.replace(/[\u{1F000}-\u{1F6FF}]|[\u{1F900}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+            pdf.text(`CRITICAL: ${cleanHeaderText}`, 18, yPosition + 6);
             yPosition += headerHeight + 5;
           }
 
-          // Sub headers (###)
+          // Sub headers (###) - Remove emojis
           else if (trimmedLine.startsWith("###")) {
             yPosition += 3;
             checkNewPage(12);
@@ -408,7 +475,9 @@ export default function PDFGenerator({
             pdf.setFontSize(10);
             pdf.setTextColor(30, 64, 175);
             pdf.setFont("helvetica", "bold");
-            pdf.text(`🔧 ${subHeaderText}`, 18, yPosition + 5);
+            // Remove emojis and special characters
+            const cleanSubHeaderText = subHeaderText.replace(/[\u{1F000}-\u{1F6FF}]|[\u{1F900}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+            pdf.text(`RECOMMENDATION: ${cleanSubHeaderText}`, 18, yPosition + 5);
             yPosition += subHeaderHeight + 3;
           }
 
@@ -421,15 +490,16 @@ export default function PDFGenerator({
             checkNewPage(8);
             let bulletText = trimmedLine;
 
-            // Clean up bullet formatting
+            // Clean up bullet formatting and emojis
             bulletText = bulletText.replace(/^\d+\.\s*/, "");
             bulletText = bulletText.replace(/^[\*\-]\s*/, "");
+            bulletText = bulletText.replace(/[\u{1F000}-\u{1F6FF}]|[\u{1F900}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
 
             pdf.setFontSize(9);
             pdf.setTextColor(0, 0, 0);
             pdf.setFont("helvetica", "normal");
 
-            // Add bullet point
+            // Add bullet point (use simple text bullet)
             pdf.setTextColor(34, 197, 94);
             pdf.text("•", 20, yPosition);
 
@@ -450,15 +520,15 @@ export default function PDFGenerator({
             pdf.setFontSize(9);
             pdf.setTextColor(0, 0, 0);
 
-            // Split by ** to handle bold formatting
-            const parts = trimmedLine.split("**");
-            let xPos = 15;
+            // Split by ** to handle bold formatting and remove emojis
+            const cleanLine = trimmedLine.replace(/[\u{1F000}-\u{1F6FF}]|[\u{1F900}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+            const parts = cleanLine.split("**");
 
             parts.forEach((part, index) => {
               if (index % 2 === 1) {
                 // Bold text
                 pdf.setFont("helvetica", "bold");
-                pdf.setTextColor(139, 69, 19); // Brown color for emphasis
+                pdf.setTextColor(139, 69, 19);
               } else {
                 // Normal text
                 pdf.setFont("helvetica", "normal");
@@ -469,7 +539,7 @@ export default function PDFGenerator({
                 const partLines = pdf.splitTextToSize(part, pageWidth - 30);
                 partLines.forEach((partLine: string) => {
                   checkNewPage();
-                  pdf.text(partLine, xPos, yPosition);
+                  pdf.text(partLine, 15, yPosition);
                   yPosition += 5;
                 });
               }
@@ -484,7 +554,9 @@ export default function PDFGenerator({
             pdf.setTextColor(0, 0, 0);
             pdf.setFont("helvetica", "normal");
 
-            const paragraphLines = pdf.splitTextToSize(trimmedLine, pageWidth - 30);
+            // Remove emojis from regular text
+            const cleanText = trimmedLine.replace(/[\u{1F000}-\u{1F6FF}]|[\u{1F900}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+            const paragraphLines = pdf.splitTextToSize(cleanText, pageWidth - 30);
             paragraphLines.forEach((paragraphLine: string) => {
               checkNewPage();
               pdf.text(paragraphLine, 15, yPosition);
@@ -513,7 +585,7 @@ export default function PDFGenerator({
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19);
       pdf.save(`IntruScan-Professional-Report-${timestamp}.pdf`);
 
-      toast("Professional PDF report with formatted AI analysis downloaded!");
+      toast("Professional PDF report generated successfully!");
     } catch (error) {
       console.error("PDF generation failed:", error);
       toast("PDF generation failed. Please try again.");
