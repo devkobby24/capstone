@@ -22,6 +22,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import PDFGenerator from "@/components/PDFGenerator";
 
 ChartJS.register(
   CategoryScale,
@@ -46,6 +47,7 @@ interface ScanData {
   status: string;
   riskLevel?: string;
   results: {
+    results: any;
     total_records: number;
     anomalies_detected: number;
     normal_records: number;
@@ -748,7 +750,6 @@ export default function ScanResultPage() {
                   </svg>
                   Copy Analysis
                 </button>
-
                 <button
                   onClick={() => {
                     const element = document.createElement("a");
@@ -780,26 +781,19 @@ export default function ScanResultPage() {
                   </svg>
                   Download Report
                 </button>
-
-                <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-2 text-sm bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-4 py-2 rounded-lg transition-all transform hover:scale-105 shadow-md"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                    />
-                  </svg>
-                  Print Report
-                </button>
+                <PDFGenerator
+                  scanData={{
+                    filename: scan.filename,
+                    uploadDate: scan.uploadDate,
+                    results: scan.results,
+                    aiAnalysis: scan.aiAnalysis,
+                  }}
+                  calculateRiskLevel={calculateRiskLevel}
+                  getClassLabel={getClassLabel}
+                  getClassColor={getClassColor}
+                  buttonText="Download Complete PDF Report"
+                  buttonClassName="flex items-center gap-2 text-sm bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+                />
               </div>
             </div>
           </div>

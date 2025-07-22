@@ -20,6 +20,7 @@ import Footer from "../components/Footer";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import PDFGenerator from "@/components/PDFGenerator";
 
 ChartJS.register(
   CategoryScale,
@@ -789,6 +790,25 @@ export default function DetectPage() {
                       </svg>
                       Print Report
                     </button>
+                    <PDFGenerator
+                      scanData={{
+                        filename: file?.name,
+                        uploadDate: new Date(),
+                        results: results,
+                        aiAnalysis: aiAnalysis
+                          ? {
+                              analysis: aiAnalysis,
+                              prompt: "",
+                              generatedAt: new Date(),
+                            }
+                          : undefined,
+                      }}
+                      calculateRiskLevel={calculateRiskLevel}
+                      getClassLabel={getClassLabel}
+                      getClassColor={getClassColor}
+                      buttonText="Download Complete PDF Report"
+                      buttonClassName="flex items-center gap-2 text-sm bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    />
                   </div>
                 </div>
               ) : (
