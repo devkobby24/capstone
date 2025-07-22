@@ -122,29 +122,29 @@ export default function ScanResultPage() {
   const getClassLabel = (classKey: string): string => {
     const labels: { [key: string]: string } = {
       class_0: "Normal Traffic",
-      class_1: "DDoS Attack",
-      class_2: "Port Scan",
+      class_1: "DoS/DDoS Attack",
+      class_2: "Port Scan", 
       class_3: "Bot Attack",
-      class_4: "Infiltration",
+      class_4: "Infiltration",        // ✅ Already included
       class_5: "Web Attack",
       class_6: "Brute Force",
-      class_7: "SQL Injection",
-      class_8: "XSS Attack",
+      class_7: "Heartbleed",          // ✅ Added
+      class_8: "SQL Injection",       // ✅ Moved from class_7
     };
     return labels[classKey] || classKey;
   };
 
   const getClassColor = (classKey: string): string => {
     const colors: { [key: string]: string } = {
-      class_0: "#22c55e",
-      class_1: "#ef4444",
-      class_2: "#f97316",
-      class_3: "#eab308",
-      class_4: "#a855f7",
-      class_5: "#ec4899",
-      class_6: "#06b6d4",
-      class_7: "#8b5cf6",
-      class_8: "#f59e0b",
+      class_0: "#22c55e", // Green - Normal
+      class_1: "#ef4444", // Red - DoS/DDoS
+      class_2: "#f97316", // Orange - Port Scan
+      class_3: "#eab308", // Yellow - Bot
+      class_4: "#a855f7", // Purple - Infiltration
+      class_5: "#ec4899", // Pink - Web Attack
+      class_6: "#06b6d4", // Cyan - Brute Force
+      class_7: "#be123c", // Rose - Heartbleed (critical vulnerability)
+      class_8: "#8b5cf6", // Violet - SQL Injection
     };
     return colors[classKey] || "#6b7280";
   };
