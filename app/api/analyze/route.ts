@@ -1,58 +1,90 @@
-export async function POST(request: Request) {
+import { NextRequest } from 'next/server';
+import { writeFile, unlink } from 'fs/promises';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { createReadStream } from 'fs';
+
+export async function POST(request: NextRequest) {
+  let tempFilePath: string | null = null;
+  
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     
-    console.log(`Processing file: ${file?.name}, Size: ${file?.size} bytes`);
+    if (!file) {
+      return Response.json({ error: 'No file uploaded' }, { status: 400 });
+    }
+
+    console.log(`🔍 API: Processing file: ${file.name}, size: ${file.size} bytes`);
+
+    // Save file temporarily
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    tempFilePath = join(tmpdir(), `upload_${Date.now()}_${file.name}`);
+    await writeFile(tempFilePath, buffer);
+
+    // Dynamic import for node-fetch
+    const { default: fetch } = await import('node-fetch');
+    const FormData = (await import('form-data')).default;
     
-    // Forward the request to your backend with extended timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout
-    
-    const response = await fetch('https://intruscan.up.railway.app/api/analyze', {
-      method: 'POST',
-      body: formData,
-      signal: controller.signal,
+    const form = new FormData();
+    form.append('file', createReadStream(tempFilePath), {
+      filename: file.name,
+      contentType: file.type,
     });
 
-    clearTimeout(timeoutId);
+    console.log('🔍 API: Forwarding to Python service...');
 
-    console.log('Railway response status:', response.status);
+    // Forward to Python service
+    const pythonResponse = await fetch('http://localhost:5000/analyze', {
+      method: 'POST',
+      body: form,
+    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Railway error response:', errorText);
-      throw new Error(`Backend error: ${response.status} - ${errorText}`);
+    if (!pythonResponse.ok) {
+      throw new Error(`Python service error: ${pythonResponse.status}`);
     }
 
-    const data = await response.json();
-    console.log('Analysis completed successfully');
+    const pythonResult = await pythonResponse.json() as any;
     
-    return Response.json(data);
+    // 🔍 DEBUG: Log what we received from Python
+    console.log('🔍 API: Received from Python service:', pythonResult);
+    console.log('🔍 API: Class distribution received:', pythonResult.results?.class_distribution);
+
+    // 🚨 CRITICAL: Make sure we're forwarding ALL the data correctly
+    const responseData = {
+      total_records: pythonResult.total_records,
+      anomalies_detected: pythonResult.anomalies_detected,
+      normal_records: pythonResult.normal_records,
+      anomaly_rate: pythonResult.anomaly_rate,
+      processing_time: pythonResult.processing_time,
+      results: {
+        anomaly_scores_summary: pythonResult.results?.anomaly_scores_summary || {},
+        class_distribution: pythonResult.results?.class_distribution || {},
+        anomaly_scores: pythonResult.results?.anomaly_scores || [],
+      }
+    };
+
+    // 🔍 DEBUG: Log what we're sending back to frontend
+    console.log('🔍 API: Sending to frontend:', responseData);
+    console.log('🔍 API: Class distribution forwarded:', responseData.results.class_distribution);
+
+    return Response.json(responseData);
+
   } catch (error) {
-    console.error('API route error:', error);
-    
-    if (error instanceof Error && error.name === 'AbortError') {
-      return Response.json(
-        { 
-          error: 'Analysis timeout - Your file is being processed but it\'s taking longer than expected. This might be due to file size or complexity.' 
-        },
-        { status: 408 }
-      );
-    }
-    
-    if (error instanceof Error && error.message.includes('fetch')) {
-      return Response.json(
-        { error: 'Unable to connect to analysis service. Please try again later.' },
-        { status: 503 }
-      );
-    }
-    
+    console.error('🔍 API: Analysis error:', error);
     return Response.json(
-      { 
-        error: error instanceof Error ? error.message : 'Failed to analyze file. Please try again.' 
-      },
+      { error: error instanceof Error ? error.message : 'Analysis failed' },
       { status: 500 }
     );
+  } finally {
+    // Clean up temp file
+    if (tempFilePath) {
+      try {
+        await unlink(tempFilePath);
+      } catch (cleanupError) {
+        console.error('🔍 API: Failed to cleanup temp file:', cleanupError);
+      }
+    }
   }
 }

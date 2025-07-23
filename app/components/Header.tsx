@@ -28,7 +28,7 @@ const Header = () => {
   ];
 
   return (
-    <header className="w-full flex justify-between items-center px-4 row-start-1 relative">
+    <header className="w-full flex justify-between items-center px-4 row-start-1 relative pt-10">
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center">
           <Image
