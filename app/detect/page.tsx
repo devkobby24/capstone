@@ -741,7 +741,7 @@ export default function DetectPage() {
                       </svg>
                       Copy Analysis
                     </button>
-                    <button
+                    {/* <button
                       onClick={() => {
                         const element = document.createElement("a");
                         const file = new Blob([aiAnalysis], {
@@ -770,7 +770,7 @@ export default function DetectPage() {
                         />
                       </svg>
                       Download Report
-                    </button>
+                    </button> */}
                     <button
                       onClick={() => window.print()}
                       className="flex items-center gap-2 text-sm bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
