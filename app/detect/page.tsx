@@ -14,7 +14,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { Bar, Line } from "react-chartjs-2";
+import { Bar } from "react-chartjs-2";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { toast } from "sonner";
@@ -79,14 +79,14 @@ export default function DetectPage() {
     formData.append("file", file);
 
     try {
-      console.log("🔍 Frontend: Making request to /api/analyze");
+      // console.log("🔍 Frontend: Making request to /api/analyze");
 
       const response = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
       });
 
-      console.log("🔍 Frontend: Response status:", response.status);
+      // console.log("🔍 Frontend: Response status:", response.status);
 
       if (!response.ok) {
         throw new Error(
