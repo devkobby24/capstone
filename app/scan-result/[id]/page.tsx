@@ -750,7 +750,7 @@ export default function ScanResultPage() {
                   </svg>
                   Copy Analysis
                 </button>
-                <button
+                {/* <button
                   onClick={() => {
                     const element = document.createElement("a");
                     const file = new Blob([scan.aiAnalysis!.analysis], {
@@ -780,7 +780,7 @@ export default function ScanResultPage() {
                     />
                   </svg>
                   Download Report
-                </button>
+                </button> */}
                 <PDFGenerator
                   scanData={{
                     filename: scan.filename,

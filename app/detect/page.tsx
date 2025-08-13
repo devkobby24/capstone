@@ -14,7 +14,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { Bar, Line } from "react-chartjs-2";
+import { Bar } from "react-chartjs-2";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { toast } from "sonner";
@@ -79,14 +79,14 @@ export default function DetectPage() {
     formData.append("file", file);
 
     try {
-      console.log("🔍 Frontend: Making request to /api/analyze");
+      // console.log("🔍 Frontend: Making request to /api/analyze");
 
       const response = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
       });
 
-      console.log("🔍 Frontend: Response status:", response.status);
+      // console.log("🔍 Frontend: Response status:", response.status);
 
       if (!response.ok) {
         throw new Error(
@@ -741,7 +741,7 @@ export default function DetectPage() {
                       </svg>
                       Copy Analysis
                     </button>
-                    <button
+                    {/* <button
                       onClick={() => {
                         const element = document.createElement("a");
                         const file = new Blob([aiAnalysis], {
@@ -770,7 +770,7 @@ export default function DetectPage() {
                         />
                       </svg>
                       Download Report
-                    </button>
+                    </button> */}
                     <button
                       onClick={() => window.print()}
                       className="flex items-center gap-2 text-sm bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"

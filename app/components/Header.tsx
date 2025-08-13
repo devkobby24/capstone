@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
 import Image from "next/image";
+import { useTheme } from "next-themes";
 import { SignInButton, UserButton, useAuth, useUser } from "@clerk/nextjs";
 
 const Header = () => {
@@ -11,6 +12,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { isSignedIn } = useAuth();
   const { user } = useUser();
+  const { theme, systemTheme } = useTheme();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -29,10 +31,11 @@ const Header = () => {
 
   return (
     <header className="w-full flex justify-between items-center px-4 row-start-1 relative pt-10">
+    
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center">
           <Image
-            src="/intruscan1.svg"
+            src={(theme === "light" || (theme === "system" && systemTheme === "light")) ? "/lightlogo.svg" : "/intruscan1.svg"}
             alt="intruScan Logo"
             width={100}
             height={100}
