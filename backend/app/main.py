@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 import json
-from typing import List, Dict
+from typing import List, Dict, Any
 import io
 import logging
 
@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Configure CORS
+# Configure CORS to allow all origins, which is necessary for the extension
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,6 +49,39 @@ IMPORTANT_FEATURES = [
     'Subflow Bwd Packets', 'Subflow Bwd Bytes', 'Init_Win_bytes_forward',
     'Init_Win_bytes_backward', 'act_data_pkt_fwd', 'min_seg_size_forward'
 ]
+
+@app.post("/api/extension-analyze")
+async def extension_analyze(request_data: Dict[str, Any]):
+    """
+    Analyzes network request data from the browser extension.
+
+    IMPORTANT: This is a placeholder implementation. The data available
+    from a browser extension (HTTP request metadata) is fundamentally
+    different from the CICIDS-2017 dataset the original model was
+    trained on. A new model trained on HTTP features would be required
+    for a real implementation.
+    """
+    logger.info(f"Received data from extension: {request_data}")
+
+    # --- Placeholder Logic ---
+    # In a real scenario, you would extract features from `request_data`,
+    # preprocess them, and feed them to a model trained for this specific data.
+    # For now, we'll simulate an anomaly detection.
+    
+    url = request_data.get("url", "")
+    # Simple heuristic: flag requests to suspicious domains or with "malware" in the URL
+    is_anomaly = "suspicious.com" in url or "malware" in url or "bad-site.net" in url
+
+    if is_anomaly:
+        logger.info(f"Anomaly detected for URL: {url}")
+        return {
+            "status": "anomaly",
+            "reason": "Request to a potentially malicious URL",
+            "url": url
+        }
+    else:
+        logger.info("Request appears normal.")
+        return {"status": "normal", "url": url}
 
 def clean_data(df):
     """Clean the dataset by handling infinity values and outliers"""
@@ -146,7 +179,7 @@ async def analyze_traffic(file: UploadFile = File(...)):
             "predictions": predictions.tolist(),
             "features_used": available_features,
             "feature_importance": dict(zip(available_features, 
-                np.abs(model.feature_importances_) if hasattr(model, 'feature_importances_') 
+                np.abs(model.feature_importances_) if hasattr(model, 'feature_importances_')  # type: ignore
                 else [0] * len(available_features)))
         }
         
