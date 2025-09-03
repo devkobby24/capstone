@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>IntruScan</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      width: 350px;
+      min-height: 400px;
+      background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+      color: #1e293b;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      padding: 20px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      transform: rotate(45deg);
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      opacity: 0.9;
+      position: relative;
+      z-index: 1;
+    }
+
+    .content {
+      padding: 24px 20px;
+    }
+
+    .status-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-text {
+      font-weight: 600;
+      font-size: 14px;
+      color: #10b981;
+    }
+
+    .status-description {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-item {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+
+    .stat-number {
+      font-size: 18px;
+      font-weight: 700;
+      color: #3b82f6;
+      margin-bottom: 2px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      font-family: inherit;
+      font-weight: 500;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      text-align: center;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn-secondary:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .footer {
+      padding: 16px 20px;
+      border-top: 1px solid #e2e8f0;
+      background: rgba(255, 255, 255, 0.5);
+      text-align: center;
+    }
+
+    .footer-text {
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    .threat-level {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .threat-low {
+      background: #dcfce7;
+      color: #166534;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">IntruScan</div>
+    <div class="subtitle">Network Security Monitor</div>
+  </div>
+
+  <div class="content">
+    <div class="status-card">
+      <div class="status-indicator">
+        <div class="status-dot"></div>
+        <span class="status-text">Active Monitoring</span>
+      </div>
+      <div class="status-description">
+        Real-time network anomaly detection is running and analyzing your traffic patterns.
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-number" id="requests-scanned">0</div>
+        <div class="stat-label">Requests Scanned</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="threats-detected">0</div>
+        <div class="stat-label">Threats Detected</div>
+      </div>
+    </div>
+
+    <div class="status-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-weight: 600; font-size: 12px;">Threat Level</span>
+        <span class="threat-level threat-low">Low</span>
+      </div>
+      <div class="status-description">
+        No anomalies detected in recent network activity.
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <a href="#" class="btn btn-primary" id="dashboard-btn">View Dashboard</a>
+      <button class="btn btn-secondary" id="settings-btn">Extension Settings</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">Powered by AI • CICIDS-2017 Dataset</div>
+  </div>
+
+  <script>
+    // Simple counter animation for demo purposes
+    let requestCount = 0;
+    let threatCount = 0;
+
+    function updateStats() {
+      document.getElementById('requests-scanned').textContent = requestCount;
+      document.getElementById('threats-detected').textContent = threatCount;
+    }
+
+    // Simulate incrementing request count
+    setInterval(() => {
+      requestCount += Math.floor(Math.random() * 3) + 1;
+      updateStats();
+    }, 2000);
+
+    // Event listeners for buttons
+    document.getElementById('dashboard-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: 'http://localhost:3000/dashboard' });
+    });
+
+    document.getElementById('settings-btn').addEventListener('click', () => {
+      // You can add settings functionality here
+      alert('Extension settings coming soon!');
+    });
+
+    // Initial load
+    updateStats();
+  </script>
+</body>
+</html>
