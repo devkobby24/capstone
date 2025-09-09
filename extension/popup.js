@@ -5,13 +5,25 @@ let requestCount = 0;
 let threatCount = 0;
 
 function updateStats() {
-    document.getElementById('requests-scanned').textContent = requestCount;
-    document.getElementById('threats-detected').textContent = threatCount;
+    const requestsElement = document.getElementById('requests-scanned');
+    const threatsElement = document.getElementById('threats-detected');
+    
+    if (requestsElement) {
+        requestsElement.textContent = requestCount;
+    }
+    if (threatsElement) {
+        threatsElement.textContent = threatCount;
+    }
 }
 
 function updateThreatLevel(level) {
     const threatLevelSpan = document.querySelector('.threat-level');
     const threatCard = document.querySelector('.status-card:last-of-type .status-description');
+
+    if (!threatLevelSpan || !threatCard) {
+        console.warn('Threat level elements not found');
+        return;
+    }
 
     // Remove existing threat level classes
     threatLevelSpan.classList.remove('threat-low', 'threat-medium', 'threat-high');
@@ -44,6 +56,11 @@ function showThreatAlert(keyword, threatLevel, url) {
     const normalCard = document.getElementById('normal-card');
     const alertKeyword = document.getElementById('alert-keyword');
 
+    if (!alertCard || !normalCard || !alertKeyword) {
+        console.warn('Alert elements not found');
+        return;
+    }
+
     // Show alert card and hide normal card
     alertCard.style.display = 'block';
     alertCard.classList.add('alert-card');
@@ -73,6 +90,11 @@ function showThreatAlert(keyword, threatLevel, url) {
 function hideThreatAlert() {
     const alertCard = document.getElementById('alert-card');
     const normalCard = document.getElementById('normal-card');
+
+    if (!alertCard || !normalCard) {
+        console.warn('Alert elements not found');
+        return;
+    }
 
     alertCard.style.display = 'none';
     normalCard.style.display = 'block';
@@ -185,12 +207,18 @@ browserAPI.storage.onChanged.addListener((changes, namespace) => {
 
 // Event listeners for buttons
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('dashboard-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        browserAPI.tabs.create({ url: 'https://intruscan.vercel.app/dashboard' });
-    });
+    const dashboardBtn = document.getElementById('dashboard-btn');
+    const settingsBtn = document.getElementById('settings-btn');
 
-    document.getElementById('settings-btn').addEventListener('click', () => {
+    if (dashboardBtn) {
+        dashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            browserAPI.tabs.create({ url: 'https://intruscan.vercel.app/dashboard' });
+        });
+    }
+
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
         // Clear current threats and reset stats
         browserAPI.storage.local.clear();
         hideThreatAlert();
@@ -209,7 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateStats();
         alert('🔄 Extension reset! Navigate to a URL containing "malware", "phishing", "virus", "scam", etc. to test threat detection.');
-    });
+        });
+    }
 
     // Simulate ongoing activity counter and save to storage
     setInterval(() => {

@@ -85,6 +85,7 @@ browserAPI.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       // Show notification (works on both Chrome and Edge)
       browserAPI.notifications.create({
         type: 'basic',
+        iconUrl: 'icons/icon48.png',
         title: 'IntruScan Security Alert',
         message: `Malicious URL detected! Threat: "${threatInfo.matched}" - Level: ${threatInfo.threatLevel.toUpperCase()}`,
         priority: 2
