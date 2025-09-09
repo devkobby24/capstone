@@ -33,11 +33,27 @@ function checkUrlForThreats(url) {
   return { detected, matched, threatLevel };
 }
 
+// Function to update counters in storage
+function updateCounters(threatDetected = false) {
+  browserAPI.storage.local.get(['totalRequestsScanned', 'totalThreatsDetected'], (result) => {
+    const newRequestCount = (result.totalRequestsScanned || 0) + 1;
+    const newThreatCount = (result.totalThreatsDetected || 0) + (threatDetected ? 1 : 0);
+    
+    browserAPI.storage.local.set({
+      totalRequestsScanned: newRequestCount,
+      totalThreatsDetected: newThreatCount
+    });
+  });
+}
+
 // Listen for tab updates (URL changes) - Works on both Chrome and Edge
 browserAPI.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url) {
     const url = changeInfo.url;
     const threatInfo = checkUrlForThreats(url);
+    
+    // Update counters
+    updateCounters(threatInfo.detected);
     
     // Store detection status in storage (works on both browsers)
     browserAPI.storage.local.set({
@@ -46,20 +62,20 @@ browserAPI.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       matchedKeyword: threatInfo.matched,
       threatLevel: threatInfo.threatLevel,
       lastCheckTime: new Date().toISOString(),
-      tabId: tabId
+      tabId: tabId,
+      currentTabUrl: url
     });
     
     if (threatInfo.detected) {
       // Show notification (works on both Chrome and Edge)
       browserAPI.notifications.create({
         type: 'basic',
-        iconUrl: 'icons/icon128.png',
-        title: '🚨 IntruScan Security Alert',
+        title: 'IntruScan Security Alert',
         message: `Malicious URL detected! Threat: "${threatInfo.matched}" - Level: ${threatInfo.threatLevel.toUpperCase()}`,
         priority: 2
       });
       
-      // Optional: You could also badge the extension icon
+      // Set badge with threat indicator
       browserAPI.action.setBadgeText({
         text: '!',
         tabId: tabId
@@ -67,7 +83,7 @@ browserAPI.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       
       browserAPI.action.setBadgeBackgroundColor({
         color: threatInfo.threatLevel === 'high' ? '#dc2626' : 
-               threatInfo.threatLevel === 'medium' ? '#f59e0b' : '#16a34a'
+               threatInfo.threatLevel === 'medium' ? '#f59e0b' : '#ef4444'
       });
     } else {
       // Clear badge if no threat
@@ -85,11 +101,35 @@ browserAPI.tabs.onActivated.addListener((activeInfo) => {
     if (tab.url) {
       const threatInfo = checkUrlForThreats(tab.url);
       
+      // Update current tab info and set badge accordingly
       browserAPI.storage.local.set({
         currentTabUrl: tab.url,
         currentTabThreat: threatInfo.detected,
-        currentThreatLevel: threatInfo.threatLevel
+        currentThreatLevel: threatInfo.threatLevel,
+        isMalicious: threatInfo.detected,
+        matchedKeyword: threatInfo.matched,
+        threatLevel: threatInfo.threatLevel,
+        lastCheckedUrl: tab.url,
+        lastCheckTime: new Date().toISOString()
       });
+      
+      // Update badge for current tab
+      if (threatInfo.detected) {
+        browserAPI.action.setBadgeText({
+          text: '!',
+          tabId: activeInfo.tabId
+        });
+        
+        browserAPI.action.setBadgeBackgroundColor({
+          color: threatInfo.threatLevel === 'high' ? '#dc2626' : 
+                 threatInfo.threatLevel === 'medium' ? '#f59e0b' : '#ef4444'
+        });
+      } else {
+        browserAPI.action.setBadgeText({
+          text: '',
+          tabId: activeInfo.tabId
+        });
+      }
     }
   });
 });
