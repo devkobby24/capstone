@@ -223,14 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Simulate ongoing activity counter and save to storage
-    setInterval(() => {
-        browserAPI.storage.local.get(['isMalicious'], (result) => {
-            if (!result.isMalicious) {
-                incrementRequestCounter();
-            }
-        });
-    }, 4000);
+    // Note: Request counter is managed by background script when URLs are actually scanned
+    // No artificial increment needed here
 
     // Initial load - check current status
     checkCurrentThreatStatus();
