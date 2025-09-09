@@ -9,6 +9,21 @@ const SUSPICIOUS_KEYWORDS = [
   "microsoft-fake", "google-fake", "login-steal", "credential", "exploit"
 ];
 
+// Initialize counters on extension startup
+function initializeCounters() {
+  browserAPI.storage.local.get(['totalRequestsScanned', 'totalThreatsDetected'], (result) => {
+    if (result.totalRequestsScanned === undefined) {
+      browserAPI.storage.local.set({ totalRequestsScanned: 0 });
+    }
+    if (result.totalThreatsDetected === undefined) {
+      browserAPI.storage.local.set({ totalThreatsDetected: 0 });
+    }
+  });
+}
+
+// Run initialization when extension starts
+initializeCounters();
+
 // Function to check URL for malicious content
 function checkUrlForThreats(url) {
   const lowerUrl = url.toLowerCase();
