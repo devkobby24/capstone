@@ -219,24 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (settingsBtn) {
         settingsBtn.addEventListener('click', () => {
-        // Clear current threats and reset stats
-        browserAPI.storage.local.clear();
-        hideThreatAlert();
-        threatCount = 0;
-        requestCount = 0;
-
-        // Clear badge on current tab
-        browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]) {
-                browserAPI.action.setBadgeText({
-                    text: '',
-                    tabId: tabs[0].id
-                });
-            }
-        });
-
-        updateStats();
-        alert('🔄 Extension reset! Navigate to a URL containing "malware", "phishing", "virus", "scam", etc. to test threat detection.');
+            alert('⚙️ Settings feature is currently in development!\n\nUpcoming features:\n• Custom threat keywords\n• Notification preferences\n• Scanning sensitivity\n• Whitelist management\n• Export scan reports\n\nStay tuned for updates! 🚀');
         });
     }
 
